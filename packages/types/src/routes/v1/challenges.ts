@@ -23,6 +23,7 @@ export const GetChallengesRoute = defineRoute({
   goodResponses: [GoodChallenges],
   badResponses: [BadNotStarted],
   authRequired: false,
+  optionalAuth: true,
   onlyWhenStarted: true,
   onlyWhenStartedPermissionsBypass: Permissions.challsRead,
 })
@@ -65,6 +66,7 @@ export const GetChallengeSolvesRoute = defineRoute({
   goodResponses: [GoodChallengeSolves],
   badResponses: [BadNotStarted, BadChallenge, BadBody],
   authRequired: false,
+  optionalAuth: true,
   params: z.object({
     id: z.string().check(z.describe('Challenge ID.')),
   }),
