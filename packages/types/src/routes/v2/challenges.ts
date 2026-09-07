@@ -25,10 +25,11 @@ import { example } from '../../util/example'
 import { DynamicScoresPayloadSchema } from '../../util/schemas'
 
 export const GetChallengesRouteV2 = defineRoute({
+  publicAccess: ['challenges'],
   path: '/v2/challs',
   method: 'GET',
   goodResponses: [GoodChallengesV2],
-  badResponses: [BadNotStarted],
+  badResponses: [BadNotStarted, BadToken],
   authRequired: false,
   optionalAuth: true,
   onlyWhenStarted: true,
@@ -101,10 +102,11 @@ export const SubmitFlagRouteV2 = defineRoute({
 })
 
 export const GetChallengeSolvesRouteV2 = defineRoute({
+  publicAccess: ['scoreboard', 'challenges'],
   path: '/v2/challs/:id/solves',
   method: 'GET',
   goodResponses: [GoodChallengeSolvesV2],
-  badResponses: [BadNotStarted, BadChallenge, BadBody],
+  badResponses: [BadNotStarted, BadChallenge, BadBody, BadToken],
   optionalAuth: true,
   params: z.object({
     id: z.string().check(z.describe('Challenge ID.')),
@@ -125,10 +127,11 @@ export const GetChallengeSolvesRouteV2 = defineRoute({
 })
 
 export const GetChallengeScoresRouteV2 = defineRoute({
+  publicAccess: ['scoreboard', 'challenges'],
   path: '/v2/challs/:id/scores',
   method: 'GET',
   goodResponses: [GoodChallengeScoresV2],
-  badResponses: [BadNotStarted, BadChallenge, BadBody],
+  badResponses: [BadNotStarted, BadChallenge, BadBody, BadToken],
   optionalAuth: true,
   params: z.object({
     id: z.string().check(z.describe('Challenge ID.')),
