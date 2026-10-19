@@ -19,8 +19,12 @@ export type CompetitionTiming = Pick<
   'startTime' | 'endTime' | 'freezeTime'
 >
 
+// bump whenever ResolvedSettings gains or changes a field: entries written by
+// the previous release would otherwise be served for up to the cache TTL
+const RESOLVED_SETTINGS_CACHE_VERSION = 2
+
 type CachedResolvedSettings = {
-  version: 1
+  version: typeof RESOLVED_SETTINGS_CACHE_VERSION
   defaultsSignature: string
   resolved: ResolvedSettings
 }
@@ -125,7 +129,7 @@ const getCachedResolvedSettings = async (
   try {
     const entry = JSON.parse(cached) as Partial<CachedResolvedSettings>
     if (
-      entry.version !== 1 ||
+      entry.version !== RESOLVED_SETTINGS_CACHE_VERSION ||
       entry.defaultsSignature !== getConfigDefaultsSignature() ||
       !entry.resolved
     ) {
@@ -145,7 +149,7 @@ const setCachedResolvedSettings = async (
   resolved: ResolvedSettings
 ): Promise<void> => {
   const entry: CachedResolvedSettings = {
-    version: 1,
+    version: RESOLVED_SETTINGS_CACHE_VERSION,
     defaultsSignature: getConfigDefaultsSignature(),
     resolved,
   }

@@ -758,10 +758,30 @@ describe('admin settings', () => {
       )
     })
 
+    test('ignores resolved settings cached by a previous release', async () => {
+      const redis = await createRedis()
+      const { freezeTime: _freezeTime, ...resolvedBeforeFreeze } =
+        resolveSettings({})
+      await redis.set(
+        'settings:resolved',
+        JSON.stringify({
+          version: 1,
+          defaultsSignature: JSON.stringify(getConfigDefaults()),
+          resolved: resolvedBeforeFreeze,
+        })
+      )
+
+      const res = await request(app, '/api/v2/integrations/client/config', {
+        method: 'GET',
+      })
+      const body = await expectResponse(res, GoodClientConfigV2)
+      expect(body.data.freezeTime).toBeNull()
+    })
+
     test('serves legacy sponsors from cached resolved settings', async () => {
       const redis = await createRedis()
       const entry = {
-        version: 1,
+        version: 2,
         defaultsSignature: JSON.stringify(getConfigDefaults()),
         resolved: {
           ...resolveSettings({}),
