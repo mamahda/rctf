@@ -87,3 +87,9 @@ The production container runs this command automatically at startup.
 Generates a nginx `client_max_body_size{:nginx}` directive for the avatar upload endpoint and outputs it to stdout. The limit is the [`<red>maxAvatarSize</red>` config option](/configuration#limits) plus headroom for the multipart request framing, so the proxy never rejects uploads the API would accept.
 
 The production container runs this command automatically at startup.
+
+### `<red>rctf</red> deployment generate-submission-body-limit`
+
+Generates a nginx `client_max_body_size{:nginx}` directive for the V2 flag submission endpoint and outputs it to stdout. The limit is `<red>submissionFields.maxSolverFileSize</red>` (zero when solver files are off) plus headroom for the flag, the AI chat links and the multipart request framing. See [Submission fields](/configuration#submission-fields).
+
+The production container runs this command automatically at startup.

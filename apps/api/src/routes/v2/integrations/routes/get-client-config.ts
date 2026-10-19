@@ -24,6 +24,7 @@ integrationsGroup.route(GetClientConfigRouteV2, async ({ res, ctx }) => {
   return res.goodClientConfigV2({
     ...resolved,
     flagFormatPlaceholder: config.flagFormatPlaceholder,
+    submissionFields: config.submissionFields,
     divisions: config.divisions,
     defaultDivision: config.defaultDivision ?? null,
     origin: config.origin,

@@ -1,8 +1,16 @@
 import { SubmitFlagRoute } from '@rctf/types'
 import { submitFlag } from '../../../../services/challenges'
+import { submissionExtrasRequired } from '../../../../services/submission-extras'
 import challsGroup from '../group'
 
 challsGroup.route(SubmitFlagRoute, async ({ res, ctx, params, body, user }) => {
+  if (submissionExtrasRequired()) {
+    return res.badBody({
+      reason:
+        'This CTF requires extra submission fields, submit through POST /api/v2/challs/:id/submit',
+    })
+  }
+
   return await submitFlag(res, ctx.var.db, ctx.var.redis, ctx.var.logger, {
     userId: user.id,
     challengeId: params.id,

@@ -24,7 +24,11 @@
           title={`${entry.label}: ${entry.value}`}
         >
           <pill-label>{entry.label}</pill-label>
-          {#if entry.href}
+          {#if entry.href && entry.external}
+            <a href={entry.href} target="_blank" rel="noopener noreferrer"
+              ><code>{entry.value}</code></a
+            >
+          {:else if entry.href}
             <a href={entry.href}><code>{entry.value}</code></a>
           {:else}
             <code>{entry.value}</code>

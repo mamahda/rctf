@@ -160,6 +160,17 @@ export const ServerConfigSchema = z.object({
   logoDarkUrl: z._default(z.string(), ''),
   flagFormatPlaceholder: z._default(z.string(), 'flag{[\\x20-\\x7e]+}'),
 
+  // Extra fields collected with flag submissions
+  submissionFields: z.prefault(
+    z.object({
+      // `required` accepts either links or an explicit "did not use AI"
+      aiChatLinks: z._default(z.enum(['off', 'optional', 'required']), 'off'),
+      solverFile: z._default(z.enum(['off', 'optional', 'required']), 'off'),
+      maxSolverFileSize: z._default(z.int().check(z.gte(1)), 2 * 1024 * 1024),
+    }),
+    {}
+  ),
+
   // Analytics
   analytics: z.optional(
     z.object({

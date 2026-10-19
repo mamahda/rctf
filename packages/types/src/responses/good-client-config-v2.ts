@@ -23,6 +23,33 @@ export const GoodClientConfigV2 = response('goodClientConfigV2', {
     flagFormatPlaceholder: example(z.string(), 'rctf{...}').check(
       z.describe('Placeholder shown in the flag submission box.')
     ),
+    submissionFields: z
+      .object({
+        aiChatLinks: example(
+          z.enum(['off', 'optional', 'required']),
+          'required'
+        ).check(
+          z.describe(
+            'Whether AI chat links are collected with flag submissions. `required` also accepts declaring that no AI was used.'
+          )
+        ),
+        solverFile: example(
+          z.enum(['off', 'optional', 'required']),
+          'optional'
+        ).check(
+          z.describe(
+            'Whether a solver file is collected with flag submissions.'
+          )
+        ),
+        maxSolverFileSize: example(z.int(), 2097152).check(
+          z.describe('Maximum solver file size in bytes.')
+        ),
+      })
+      .check(
+        z.describe(
+          'Extra fields collected with flag submissions through `POST /v2/challs/:id/submit`.'
+        )
+      ),
     analytics: z
       .nullable(
         z.object({

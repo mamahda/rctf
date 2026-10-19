@@ -9,5 +9,7 @@ export default defineCommand({
     'generate-csp': () => import('./generate-csp').then(m => m.default),
     'generate-avatar-body-limit': () =>
       import('./generate-avatar-body-limit').then(m => m.default),
+    'generate-submission-body-limit': () =>
+      import('./generate-submission-body-limit').then(m => m.default),
   },
 })

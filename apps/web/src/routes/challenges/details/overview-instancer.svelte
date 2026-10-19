@@ -186,6 +186,16 @@
       return
     }
 
+    const fields = clientConfig?.submissionFields
+    if (
+      fields?.aiChatLinks === 'required' ||
+      fields?.solverFile === 'required'
+    ) {
+      // the required AI chat links or solver file can only be given through the submit form
+      toast.info('Submit this flag below together with the required fields.')
+      return
+    }
+
     const res = await apiRequest(SubmitFlagRoute, { id: challengeId, flag })
     if (res.kind === GoodFlag.kind) {
       toast.success('Flag correct!')

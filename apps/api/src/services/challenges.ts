@@ -47,6 +47,13 @@ import {
   userIsNotBanned,
 } from './challenge-queries'
 import { rateLimitFlag } from './rate-limit'
+import {
+  deleteSolverFile,
+  NO_SUBMISSION_EXTRAS,
+  storeSolverFile,
+  submissionExtrasDetails,
+  type SubmissionExtras,
+} from './submission-extras'
 import { getCompetitionTiming } from './settings'
 import { createSubmission } from './submissions'
 import { getUser } from './users'
@@ -341,6 +348,7 @@ export const createSolveAndGetBloodNumber = async (
     matchedFlag?: MatchedFlagEntry
     cheated?: boolean
     cheatedFrom?: string
+    extraDetails?: Record<string, unknown>
   }
 ): Promise<number | null> => {
   const solveId = crypto.randomUUID()
@@ -390,6 +398,7 @@ export const createSolveAndGetBloodNumber = async (
             }
           : {}),
         ...(params.cheatedFrom ? { cheatedFrom: params.cheatedFrom } : {}),
+        ...params.extraDetails,
       },
       relatedId: solveId,
       createdAt: new Date().toISOString(),
@@ -1149,8 +1158,12 @@ export const submitFlag = async (
     challengeId: string
     flag: string
     submissionIp: string | undefined
+    // already checked against the config by normalizeSubmissionExtras
+    extras?: SubmissionExtras
   }
 ): Promise<ReturnType<SubmitResponseHelpers[keyof SubmitResponseHelpers]>> => {
+  const extras = params.extras ?? NO_SUBMISSION_EXTRAS
+
   // NOTE(es3n1n): Directly querying from the database to bypass any stale cache entries
   const submitter = await getSubmitterState(db, params.userId)
   if (!submitter) {
@@ -1199,6 +1212,7 @@ export const submitFlag = async (
       result: SubmissionResult.INCORRECT,
       details: {
         submittedFlag: params.flag,
+        ...submissionExtrasDetails(extras),
       },
     }).catch(err =>
       log.error(
@@ -1231,6 +1245,11 @@ export const submitFlag = async (
     'successfull flag submission'
   )
 
+  // only solves keep the solver file, so it is stored once the flag matched
+  const solverFile = extras.solverFile
+    ? await storeSolverFile(extras.solverFile)
+    : undefined
+
   let bloodNumber: number | null
   try {
     bloodNumber = await createSolveAndGetBloodNumber(db, {
@@ -1241,8 +1260,12 @@ export const submitFlag = async (
       matchedFlag: matched,
       cheated,
       cheatedFrom,
+      extraDetails: submissionExtrasDetails(extras, solverFile?.stored),
     })
   } catch (error) {
+    if (solverFile) {
+      await deleteSolverFile(solverFile.key)
+    }
     const constraintName = getErrorConstraint(error)
     if (constraintName === 'uq') {
       await createSubmission(db, {
@@ -1251,7 +1274,10 @@ export const submitFlag = async (
         userId: params.userId,
         ip: params.submissionIp,
         result: SubmissionResult.ALREADY_SOLVED,
-        details: { submittedFlag: params.flag },
+        details: {
+          submittedFlag: params.flag,
+          ...submissionExtrasDetails(extras),
+        },
       }).catch(err =>
         log.error(
           { err, challengeId: params.challengeId, userId: params.userId },
@@ -1267,6 +1293,9 @@ export const submitFlag = async (
   }
 
   if (bloodNumber === null) {
+    if (solverFile) {
+      await deleteSolverFile(solverFile.key)
+    }
     return res.badChallenge()
   }
 

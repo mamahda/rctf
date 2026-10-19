@@ -21,6 +21,7 @@ fi
 
 rctf deployment generate-csp --web-build /app/static > /tmp/nginx/security-headers.conf
 rctf deployment generate-avatar-body-limit > /tmp/nginx/avatar-body-limit.conf
+rctf deployment generate-submission-body-limit > /tmp/nginx/submission-body-limit.conf
 nginx -t -e stderr
 
 exec supervisord -c /etc/supervisord.conf

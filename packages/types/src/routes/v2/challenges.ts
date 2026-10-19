@@ -2,16 +2,26 @@ import { z } from 'zod/mini'
 import { Permissions } from '../../enums'
 import { defineRoute } from '../../internal'
 import {
+  BadAlreadySolvedChallenge,
   BadBody,
   BadChallenge,
+  BadEnded,
+  BadFlag,
   BadNotStarted,
+  BadPerms,
+  BadRateLimit,
   BadReplayedRequest,
   BadSignature,
+  BadToken,
+  BadUnknownUser,
   GoodChallengeScoresV2,
   GoodChallengeSolvesV2,
   GoodChallengesV2,
   GoodDynamicScores,
+  GoodFlag,
 } from '../../responses'
+import { FileFieldSchema } from '../../util'
+import { example } from '../../util/example'
 import { DynamicScoresPayloadSchema } from '../../util/schemas'
 
 export const GetChallengesRouteV2 = defineRoute({
@@ -40,6 +50,54 @@ export const SubmitDynamicScoresRouteV2 = defineRoute({
     id: z.string().check(z.describe('Challenge ID.')),
   }),
   body: DynamicScoresPayloadSchema,
+})
+
+// Which extra fields are accepted or required comes from `submissionFields` in the client config
+export const SubmitFlagRouteV2 = defineRoute({
+  path: '/v2/challs/:id/submit',
+  method: 'POST',
+  bodyFormat: 'form-data',
+  body: z.object({
+    flag: z
+      .string()
+      .check(z.maxLength(1024))
+      .check(z.describe('Maximum length `1024`.')),
+    aiChatLinks: z.optional(
+      example(z.string(), 'https://chatgpt.com/share/...')
+        .check(z.maxLength(24_576))
+        .check(z.describe('AI chat share links, one HTTP(S) URL per line.'))
+    ),
+    didNotUseAi: z.optional(
+      z
+        .enum(['true', 'false'])
+        .check(z.describe('`true` to declare that no AI was used.'))
+    ),
+    solverFile: z.optional(
+      example(FileFieldSchema, '<binary solver file>').check(
+        z.describe('Solver script or writeup used to get the flag.')
+      )
+    ),
+  }),
+  goodResponses: [GoodFlag],
+  badResponses: [
+    BadBody,
+    BadFlag,
+    BadPerms,
+    BadNotStarted,
+    BadEnded,
+    BadChallenge,
+    BadRateLimit,
+    BadAlreadySolvedChallenge,
+    BadUnknownUser,
+    BadToken,
+  ],
+  authRequired: true,
+  params: z.object({
+    id: z.string().check(z.describe('Challenge ID.')),
+  }),
+  onlyWhenStarted: true,
+  onlyWhenStartedPermissionsBypass: Permissions.challsWrite,
+  onlyWhenNotFinished: true,
 })
 
 export const GetChallengeSolvesRouteV2 = defineRoute({

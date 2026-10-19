@@ -38,6 +38,8 @@ export const SubmitFlagRoute = defineRoute({
   }),
   goodResponses: [GoodFlag],
   badResponses: [
+    // returned when the CTF requires extra submission fields, which only `POST /v2/challs/:id/submit` accepts
+    BadBody,
     BadFlag,
     BadPerms,
     BadNotStarted,

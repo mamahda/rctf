@@ -24,6 +24,7 @@ import {
 } from '$lib/filters/time'
 import { PAGE_SIZE, type ResultTone } from '$lib/filters/ui'
 import type { AdminSubmissionsQueryParams } from '$lib/query/keys'
+import { formatFileSize } from '$lib/utils/filesize'
 import { isRecord } from '$lib/utils/is-record'
 import type { SortOrder, SortState } from '../admin-table-logic'
 
@@ -71,7 +72,53 @@ export type DetailEntry = {
   label: string
   value: string
   href?: string
+  // opens in a new tab without sharing the admin session's referrer
+  external?: boolean
   wide?: boolean
+}
+
+// links come from participants, so anything but plain HTTP(S) or our own
+// uploads is shown as text rather than turned into a link
+const isSafeLink = (url: string): boolean =>
+  /^https?:\/\//i.test(url) || url.startsWith('/uploads/')
+
+function submissionExtrasEntries(
+  details: Record<string, unknown>
+): DetailEntry[] {
+  const entries: DetailEntry[] = []
+  if (Array.isArray(details.aiChatLinks)) {
+    for (const [index, url] of details.aiChatLinks.entries()) {
+      if (typeof url !== 'string') continue
+      entries.push({
+        label: `AI chat ${index + 1}`,
+        value: url,
+        ...(isSafeLink(url) ? { href: url, external: true } : {}),
+        wide: true,
+      })
+    }
+  }
+  if (details.didNotUseAi === true) {
+    entries.push({ label: 'AI', value: 'did not use AI' })
+  }
+  const solverFile = details.solverFile
+  if (
+    isRecord(solverFile) &&
+    typeof solverFile.name === 'string' &&
+    typeof solverFile.url === 'string'
+  ) {
+    entries.push({
+      label: 'solver',
+      value:
+        typeof solverFile.size === 'number'
+          ? `${solverFile.name} (${formatFileSize(solverFile.size)})`
+          : solverFile.name,
+      ...(isSafeLink(solverFile.url)
+        ? { href: solverFile.url, external: true }
+        : {}),
+      wide: true,
+    })
+  }
+  return entries
 }
 
 export const KIND_OPTIONS = [
@@ -254,6 +301,7 @@ export function detailEntries(submission: Submission): DetailEntry[] {
   if (submission.kind === SubmissionKind.FLAG) {
     const entries: DetailEntry[] = [
       { label: 'flag', value: formatDetailValue(details.submittedFlag) },
+      ...submissionExtrasEntries(details),
     ]
     if (submission.result === SubmissionResult.CHEATED) {
       entries.push({

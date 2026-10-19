@@ -413,6 +413,25 @@ flagFormatPlaceholder: 'flag{[\x20-\x7e]+}'
 The admin settings API can update `<red>ctfName</red>`, event timing, homepage content, sponsors, metadata, favicon, and logos without restarting rCTF.
 :::
 
+### Submission fields
+
+```yaml
+submissionFields:
+  aiChatLinks: required # off | optional | required
+  solverFile: optional # off | optional | required
+  maxSolverFileSize: 2097152 # 2 MB
+```
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `<red>submissionFields.aiChatLinks</red>` | `string{:ts}` | `<green>off</green>` | Collect AI chat share links with flag submissions. `<green>required</green>` accepts either at least one link or an explicit "I did not use AI". Up to 10 HTTP(S) links are kept. |
+| `<red>submissionFields.solverFile</red>` | `string{:ts}` | `<green>off</green>` | Collect the solver script or writeup used to get the flag. |
+| `<red>submissionFields.maxSolverFileSize</red>` | `number{:ts}` | `2097152{:ts}` (2 MB) | Maximum solver file size in bytes. The production container's nginx body limit for the submit endpoint is generated from this value at startup. |
+
+The website submits flags through `POST /api/v2/challs/:id/submit`, which accepts these fields as multipart form-data. While any field is `<green>required</green>`, `POST /api/v1/challs/:id/submit` rejects submissions, and flags revealed by instancer actions aren't submitted automatically.
+
+The links are recorded on every flag submission, while the solver file is only stored for correct ones. Both show up in the submission details of the admin panel. Solver files go through the [upload provider](/providers/uploads) under a random `submissions/<uuid>/` path. Uploads are served without authentication, so the unguessable path and the admin panel being the only place that lists it are what keep other teams from reading them.
+
 ### Analytics
 
 ```yaml
