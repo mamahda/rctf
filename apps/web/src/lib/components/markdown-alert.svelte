@@ -1,5 +1,6 @@
 <script lang="ts">
   import { IconCheck, IconCopy } from '$lib/icons'
+  import { writeClipboard } from '$lib/utils/clipboard'
   import type { AlertType } from '$lib/utils/markdown'
   import { onDestroy } from 'svelte'
 
@@ -44,10 +45,13 @@
   const CopyIcon = $derived(copied ? IconCheck : IconCopy)
 
   function copy() {
-    navigator.clipboard.writeText(trimmed)
-    copied = true
-    clearTimeout(timeout)
-    timeout = setTimeout(() => (copied = false), 1500)
+    writeClipboard(trimmed)
+      .then(() => {
+        copied = true
+        clearTimeout(timeout)
+        timeout = setTimeout(() => (copied = false), 1500)
+      })
+      .catch(() => {})
   }
 </script>
 

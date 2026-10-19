@@ -23,6 +23,7 @@
   import Tooltip from '$lib/ui/tooltip.svelte'
   import { getCategoryConfig } from '$lib/utils/categories'
   import { hasPermissions } from '$lib/utils/permissions'
+  import { randomUUID } from '$lib/utils/uuid'
   import {
     cancel,
     del,
@@ -131,7 +132,7 @@
     }
     const current = editor
     const wasCreating = current.mode === 'creating'
-    const id = wasCreating ? crypto.randomUUID() : current.challenge!.id
+    const id = wasCreating ? randomUUID() : current.challenge!.id
     onEditorChange(save(current))
 
     try {

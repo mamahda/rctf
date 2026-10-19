@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify'
 import { Marked, type TokenizerAndRendererExtension } from 'marked'
+import { randomUUID } from './uuid'
 
 export const ALERT_TYPES = [
   'note',
@@ -22,7 +23,7 @@ interface AlertToken {
   content: string
 }
 
-const nonce = crypto.randomUUID()
+const nonce = randomUUID()
 const HYDRATION_ATTRS = [
   'data-alert',
   'data-type',
