@@ -183,7 +183,8 @@ export const filterInstanceEndpoints = (
       .endpoints!.slice(0, instanceStatus.endpoints!.indexOf(endpoint))
       .filter(e => !e.bypassExpose).length
     const exposeConfig = expose?.[nonBypassSoFar]
-    if (exposeConfig?.shouldDisplay) {
+    // unset means shown, matching the admin panel and the instancers
+    if (exposeConfig && (exposeConfig.shouldDisplay ?? true)) {
       acc.push({
         ...endpoint,
         title: exposeConfig.title,
