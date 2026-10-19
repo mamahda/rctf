@@ -20,6 +20,7 @@ import {
   BadRateLimit,
   BadToken,
   BadUnknownSolveV2,
+  BadUnknownSubmission,
   BadUnknownUser,
   BadUnknownVerification,
   BadUserPrivileged,
@@ -37,6 +38,7 @@ import {
   GoodAdminExternalAuthClients,
   GoodAdminSettings,
   GoodAdminSettingsUpdate,
+  GoodAdminSubmissionUpdated,
   GoodAdminSubmissions,
   GoodAdminUserDeleteV2,
   GoodAdminUsersV2,
@@ -246,6 +248,41 @@ export const FilterAdminSubmissionsRouteV2 = defineRoute({
   body: AdminSubmissionsFilterBody,
   goodResponses: [GoodAdminSubmissions],
   badResponses: [BadBody, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite | Permissions.challsRead,
+})
+
+// Only the fields collected through `submissionFields` can be changed, the
+// result stays as recorded since solves and scores were derived from it
+export const UpdateAdminSubmissionRouteV2 = defineRoute({
+  path: '/v2/admin/submissions/:id',
+  method: 'PATCH',
+  params: z.object({
+    id: z.string().check(z.describe('Submission ID.')),
+  }),
+  body: z.object({
+    aiChatLinks: z.optional(
+      z
+        .array(HttpUrl.check(z.maxLength(2048)))
+        .check(z.maxLength(10))
+        .check(z.describe('Replacement AI chat links, at most 10.'))
+    ),
+    didNotUseAi: z.optional(
+      z.boolean().check(z.describe('Whether the team declared not using AI.'))
+    ),
+    adminNote: z.optional(
+      z
+        .nullable(z.string().check(z.maxLength(2000)))
+        .check(z.describe('Note for other admins, or `null` to remove it.'))
+    ),
+    removeSolverFile: z.optional(
+      z
+        .literal(true)
+        .check(z.describe('Delete the stored solver file of the submission.'))
+    ),
+  }),
+  goodResponses: [GoodAdminSubmissionUpdated],
+  badResponses: [BadBody, BadPerms, BadToken, BadUnknownSubmission],
   authRequired: true,
   permissions: Permissions.usersWrite | Permissions.challsRead,
 })

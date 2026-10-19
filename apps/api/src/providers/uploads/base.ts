@@ -66,6 +66,10 @@ export abstract class UploadProvider extends BaseProvider {
   }
 
   async deleteAvatar(url: string): Promise<void> {
+    await this.deleteFileByUrl(url)
+  }
+
+  async deleteFileByUrl(url: string): Promise<void> {
     const key = this.extractKeyFromUrl(url)
     if (key) {
       await this.deleteFile(key).catch(() => {})

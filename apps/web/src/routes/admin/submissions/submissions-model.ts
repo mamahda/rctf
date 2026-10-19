@@ -118,7 +118,49 @@ function submissionExtrasEntries(
       wide: true,
     })
   }
+  if (typeof details.adminNote === 'string') {
+    entries.push({ label: 'note', value: details.adminNote, wide: true })
+  }
+  if (typeof details.adminEditedAt === 'string') {
+    entries.push({
+      label: 'edited',
+      value: new Date(details.adminEditedAt).toLocaleString(),
+      ...(typeof details.adminEditedBy === 'string'
+        ? { href: `/admin/profile/${details.adminEditedBy}` }
+        : {}),
+    })
+  }
   return entries
+}
+
+export type SubmissionExtrasForm = {
+  aiChatLinks: string
+  didNotUseAi: boolean
+  adminNote: string
+  hasSolverFile: boolean
+  removeSolverFile: boolean
+}
+
+export function submissionExtrasForm(
+  submission: Submission
+): SubmissionExtrasForm {
+  const details = isRecord(submission.details) ? submission.details : {}
+  return {
+    aiChatLinks: Array.isArray(details.aiChatLinks)
+      ? details.aiChatLinks.filter(link => typeof link === 'string').join('\n')
+      : '',
+    didNotUseAi: details.didNotUseAi === true,
+    adminNote: typeof details.adminNote === 'string' ? details.adminNote : '',
+    hasSolverFile: isRecord(details.solverFile),
+    removeSolverFile: false,
+  }
+}
+
+export function parseSubmissionLinks(raw: string): string[] {
+  return raw
+    .split(/\r?\n/)
+    .map(link => link.trim())
+    .filter(Boolean)
 }
 
 export const KIND_OPTIONS = [

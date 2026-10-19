@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { SubmissionKind } from '@rctf/types'
   import { IconX } from '$lib/icons'
+  import Button from '$lib/ui/button.svelte'
   import { detailEntries, type Submission } from '../submissions-model'
+  import SubmissionEditDialog from './submission-edit-dialog.svelte'
 
   type Props = {
     submission: Submission
@@ -10,6 +13,9 @@
   let { submission, onClose }: Props = $props()
 
   const entries = $derived(detailEntries(submission))
+  const editable = $derived(submission.kind === SubmissionKind.FLAG)
+
+  let editing = $state(false)
 </script>
 
 <detail-row>
@@ -37,10 +43,23 @@
       {/each}
     {/if}
   </detail-pills>
+  {#if editable}
+    <Button size="sm" variant="ghost" onclick={() => (editing = true)}
+      >Edit</Button
+    >
+  {/if}
   <button type="button" aria-label="Close submitted details" onclick={onClose}>
     <IconX aria-hidden="true" />
   </button>
 </detail-row>
+
+{#if editable}
+  <SubmissionEditDialog
+    open={editing}
+    onOpenChange={open => (editing = open)}
+    {submission}
+  />
+{/if}
 
 <style>
   detail-row {

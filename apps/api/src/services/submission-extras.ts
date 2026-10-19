@@ -1,5 +1,12 @@
 import { config } from '@rctf/config'
-import { isHttpUrl, type FileField } from '@rctf/types'
+import {
+  submissions,
+  type DatabaseClient,
+  type SubmissionDetails,
+} from '@rctf/db'
+import { takeUnique } from '@rctf/db/util'
+import { isHttpUrl, SubmissionKind, type FileField } from '@rctf/types'
+import { eq } from 'drizzle-orm'
 import { uploadProvider } from '../providers/instances/uploads'
 
 const MAX_AI_CHAT_LINKS = 10
@@ -123,3 +130,91 @@ export const submissionExtrasDetails = (
   ...(extras.didNotUseAi ? { didNotUseAi: true } : {}),
   ...(solverFile ? { solverFile } : {}),
 })
+
+export interface SubmissionExtrasPatch {
+  aiChatLinks?: string[]
+  didNotUseAi?: boolean
+  adminNote?: string | null
+  removeSolverFile?: true
+}
+
+const setOrDelete = (
+  details: SubmissionDetails,
+  key: string,
+  value: unknown
+): void => {
+  if (value === undefined) {
+    delete details[key]
+  } else {
+    details[key] = value
+  }
+}
+
+export const updateSubmissionExtras = async (
+  db: DatabaseClient,
+  params: { id: string; adminId: string; patch: SubmissionExtrasPatch }
+): Promise<
+  | { ok: true; details: SubmissionDetails }
+  | { ok: false; error: 'unknownSubmission' | 'conflictingAiFields' }
+> => {
+  const { patch } = params
+  const result = await db.transaction(async tx => {
+    const row = await tx
+      .select({ kind: submissions.kind, details: submissions.details })
+      .from(submissions)
+      .where(eq(submissions.id, params.id))
+      .limit(1)
+      .for('update')
+      .then(takeUnique)
+    if (!row || row.kind !== SubmissionKind.FLAG) {
+      return { ok: false, error: 'unknownSubmission' } as const
+    }
+
+    const details: SubmissionDetails = { ...row.details }
+    if (patch.aiChatLinks !== undefined) {
+      setOrDelete(
+        details,
+        'aiChatLinks',
+        patch.aiChatLinks.length > 0 ? patch.aiChatLinks : undefined
+      )
+    }
+    if (patch.didNotUseAi !== undefined) {
+      setOrDelete(details, 'didNotUseAi', patch.didNotUseAi || undefined)
+    }
+    if (
+      details.didNotUseAi === true &&
+      Array.isArray(details.aiChatLinks) &&
+      details.aiChatLinks.length > 0
+    ) {
+      return { ok: false, error: 'conflictingAiFields' } as const
+    }
+    if (patch.adminNote !== undefined) {
+      setOrDelete(details, 'adminNote', patch.adminNote?.trim() || undefined)
+    }
+
+    let removedSolverFileUrl: string | undefined
+    const solverFile = details.solverFile as Partial<StoredSolverFile> | null
+    if (patch.removeSolverFile && solverFile) {
+      removedSolverFileUrl = solverFile.url
+      delete details.solverFile
+    }
+
+    details.adminEditedBy = params.adminId
+    details.adminEditedAt = new Date().toISOString()
+
+    await tx
+      .update(submissions)
+      .set({ details })
+      .where(eq(submissions.id, params.id))
+    return { ok: true, details, removedSolverFileUrl } as const
+  })
+
+  if (!result.ok) {
+    return result
+  }
+  // after the commit, so a rolled back update never loses the file
+  if (result.removedSolverFileUrl) {
+    await uploadProvider.deleteFileByUrl(result.removedSolverFileUrl)
+  }
+  return { ok: true, details: result.details }
+}

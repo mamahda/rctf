@@ -223,6 +223,45 @@ describe('detailEntries', () => {
     expect(entries).toEqual([{ label: 'flag', value: 'rctf{pwned}' }])
   })
 
+  test('a flag submission links its AI chats and solver file', () => {
+    const entries = detailEntries(
+      submissionWith({
+        kind: SubmissionKind.FLAG,
+        details: {
+          submittedFlag: 'rctf{pwned}',
+          aiChatLinks: ['https://chatgpt.com/share/a', 'javascript:alert(1)'],
+          solverFile: {
+            name: 'solve.py',
+            url: '/uploads/submissions/abc/solve.py',
+            size: 2048,
+          },
+          adminNote: 'looks fine',
+        },
+      })
+    )
+
+    expect(entries).toEqual([
+      { label: 'flag', value: 'rctf{pwned}' },
+      {
+        label: 'AI chat 1',
+        value: 'https://chatgpt.com/share/a',
+        href: 'https://chatgpt.com/share/a',
+        external: true,
+        wide: true,
+      },
+      // never rendered as a link, the value comes from a participant
+      { label: 'AI chat 2', value: 'javascript:alert(1)', wide: true },
+      {
+        label: 'solver',
+        value: 'solve.py (2.0 KB)',
+        href: '/uploads/submissions/abc/solve.py',
+        external: true,
+        wide: true,
+      },
+      { label: 'note', value: 'looks fine', wide: true },
+    ])
+  })
+
   test('a cheated flag submission surfaces the original owner', () => {
     const entries = detailEntries(
       submissionWith({
