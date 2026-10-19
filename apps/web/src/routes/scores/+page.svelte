@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Permissions } from '@rctf/types'
   import CtfNotStarted from '$lib/components/ctf-not-started.svelte'
-  import { IconFlagBanner, IconSearch, IconTrophy } from '$lib/icons'
+  import { IconClock, IconFlagBanner, IconSearch, IconTrophy } from '$lib/icons'
   import { useClientConfig } from '$lib/query/config'
   import EmptyState from '$lib/ui/empty-state.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
@@ -80,6 +80,7 @@
 
     {#if isFrozen}
       <freeze-notice role="status">
+        <IconClock aria-hidden="true" />
         <strong
           >{seesLiveScoreboard
             ? 'Public scoreboard frozen'
@@ -179,9 +180,10 @@
   freeze-notice {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    align-items: center;
+    gap: var(--space-3xs);
     margin: 0 1rem var(--space-xs);
-    padding: 0.65rem 0.85rem;
+    padding: var(--space-2xs) var(--space-xs);
     border: 2px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--background-l1);
@@ -190,6 +192,13 @@
 
     strong {
       color: var(--foreground-l0);
+    }
+
+    :global(svg) {
+      flex-shrink: 0;
+      inline-size: 1rem;
+      block-size: 1rem;
+      color: var(--foreground-l3);
     }
 
     @media (width >= 48rem) {
