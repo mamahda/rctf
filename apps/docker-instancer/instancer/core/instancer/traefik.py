@@ -113,6 +113,8 @@ def expose_ports(
                     labels[f'traefik.http.routers.{redirect_router_name}.middlewares'] = (
                         config.TRAEFIK_PERMANENT_REDIRECT_MIDDLEWARE_NAME
                     )
+                    # Traefik only auto-links a router to a service when the container defines exactly one
+                    labels[f'traefik.http.routers.{redirect_router_name}.service'] = router_name
 
     labels[ContainerLabels.EXPOSED_HOSTNAMES] = SEPARATOR.join(hosts)
     return hosts, exposed
