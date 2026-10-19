@@ -7,6 +7,7 @@ from aiodocker.containers import DockerContainer
 from instancer.core.config import config
 from instancer.core.instancer.const import ContainerLabels, get_search_filters
 from instancer.core.instancer.interpolation import interpolate_environment
+from instancer.core.instancer.ports import publish_ports
 from instancer.core.instancer.traefik import expose_ports
 from instancer.core.instancer.volumes import parse_volume_mounts
 from instancer.protocol import types as protocol
@@ -39,12 +40,17 @@ async def create_container(  # noqa: PLR0913
     routing_network: str | None,
     global_indices: list[int],
     env_context: dict[str, str],
+    host_ports: dict[int, int] | None = None,  # global expose index: host port, set in port mode
 ) -> tuple[DockerContainer, list[protocol.RCTFInstanceDetails.Endpoint]]:
     labels = common_labels.copy()
     instance_id = common_labels[ContainerLabels.INSTANCE_ID]
     actual_svc_name = f'{config.PREFIX}-{challenge_integration_id}-{svc_name}-{instance_id}'
 
-    _, exposed = expose_ports(labels, svc_name, exposes, instance_id, routing_network, global_indices)
+    port_bindings: dict[str, list[dict[str, str]]] = {}
+    if host_ports is None:
+        _, exposed = expose_ports(labels, svc_name, exposes, instance_id, routing_network, global_indices)
+    else:
+        port_bindings, exposed = publish_ports(labels, svc_name, exposes, global_indices, host_ports)
 
     endpoints_config: dict[str, dict] = {networks_created[network]: {} for network in container.networks}
     volume_mounts = parse_volume_mounts(container.volumes, volumes_created)
@@ -65,7 +71,7 @@ async def create_container(  # noqa: PLR0913
                 'NetworkingConfig': {
                     'EndpointsConfig': endpoints_config,
                 },
-                'ExposedPorts': {port: {} for port in container.expose},
+                'ExposedPorts': {port: {} for port in [*container.expose, *port_bindings]},
                 'Healthcheck': {
                     'Test': container.healthcheck.test,
                     'Interval': parse_nano_sec(container.healthcheck.interval),
@@ -78,6 +84,7 @@ async def create_container(  # noqa: PLR0913
                 'Labels': merge(container.labels, labels),
                 'HostConfig': {
                     'NetworkMode': container.network_mode or ('bridge' if endpoints_config else 'none'),
+                    'PortBindings': port_bindings or None,
                     'Mounts': volume_mounts or None,
                     'Dns': container.dns,
                     'DnsOptions': container.dns_opt,

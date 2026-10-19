@@ -24,16 +24,21 @@ def expose_host(expose: protocol.InstancerExpose, instance_id: str) -> str:
     return f'{expose.host_prefix}-{instance_id}.{config.INSTANCES_HOST}'.replace(SEPARATOR, '')
 
 
-def build_exposed_hostnames(exposes: list[protocol.InstancerExpose], instance_id: str) -> list[dict]:
-    coerce_tcp_exposes(exposes)
+def build_exposed_hostnames(
+    exposes: list[protocol.InstancerExpose],
+    instance_id: str,
+    host_ports: dict[int, int] | None = None,  # global expose index: host port, set in port mode
+) -> list[dict]:
+    if host_ports is None:
+        coerce_tcp_exposes(exposes)
 
     result: list[dict] = []
-    for expose in exposes:
+    for i, expose in enumerate(exposes):
         entry: dict = {
             'kind': str(expose.kind),
             'hostPrefix': expose.host_prefix,
-            'host': expose_host(expose, instance_id),
-            'port': KIND_TO_PORT[expose.kind],
+            'host': expose_host(expose, instance_id) if host_ports is None else config.INSTANCES_HOST,
+            'port': KIND_TO_PORT[expose.kind] if host_ports is None else host_ports[i],
             'containerName': expose.container_name,
             'containerPort': expose.container_port,
         }
@@ -137,8 +142,14 @@ def extract_exposes(labels: dict[str, str]) -> list[tuple[int, protocol.RCTFInst
     if len(indices) != len(exposed_hosts):
         indices = list(range(len(exposed_hosts)))
 
+    # Only containers created in port mode carry their published host ports
+    raw_ports = labels.get(ContainerLabels.EXPOSED_PORTS, '')
+    ports: list[int | None] = [int(port) for port in raw_ports.split(SEPARATOR)] if raw_ports else []
+    if len(ports) != len(exposed_hosts):
+        ports = [None] * len(exposed_hosts)
+
     result: list[tuple[int, protocol.RCTFInstanceDetails.Endpoint]] = []
-    for index, kind, host in zip(indices, exposed_kinds, exposed_hosts, strict=True):
+    for index, kind, host, port in zip(indices, exposed_kinds, exposed_hosts, ports, strict=True):
         kind_mapped = protocol.ExposeKind(kind)
         result.append(
             (
@@ -146,7 +157,7 @@ def extract_exposes(labels: dict[str, str]) -> list[tuple[int, protocol.RCTFInst
                 protocol.RCTFInstanceDetails.Endpoint(
                     kind=kind_mapped,
                     host=host,
-                    port=KIND_TO_PORT[kind_mapped],
+                    port=KIND_TO_PORT[kind_mapped] if port is None else port,
                 ),
             )
         )

@@ -108,6 +108,21 @@ $ <red>cp</red> /etc/letsencrypt/live/instancer.example.com/privkey.pem deploy/d
 
 Traefik loads these at startup and doesn't watch the file config (`watch: false{:yaml}`), so restart the Traefik container after renewing or replacing the certificate.
 
+### Port mode
+
+By default, every instance shares Traefik's ports and is told apart by hostname. Without a domain or wildcard certificate, the instancer can publish each exposed container port on its own host port instead:
+
+```sh title="deploy/docker-instancer/.env"
+EXPOSE_MODE=port
+INSTANCES_HOST=203.0.113.10
+PORT_RANGE_START=30000
+PORT_RANGE_END=31000
+```
+
+Each `<red>expose</red>` entry then gets a random free port from the range, and participants connect to `<INSTANCES_HOST>:<port>`. Endpoints keep their kind, so a `<green>tcp</green>` expose is shown as `nc <host> <port>` without TLS, and `<green>https</green>` or `<green>tcp-ssl</green>` exposes must terminate TLS inside the challenge. Traefik and the `<red>hostPrefix</red>` are unused in this mode.
+
+Docker can't publish ports of containers on internal networks, so the network that carries the published ports is a regular bridge with outbound NAT turned off. Published ports accept connections, but the container can't reach the internet unless `<yellow>PORT_MODE_ALLOW_EGRESS</yellow>` is `true`. Allow the port range through the host firewall.
+
 ### Docker daemon address pool
 
 Every instanced challenge creates its own Docker network, so the daemon's default address pool can run out after roughly 30 networks. When that happens, `$ <red>docker</red> network create` fails with `could not find an available, non-overlapping IPv4 address pool`.

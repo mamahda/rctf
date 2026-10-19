@@ -18,6 +18,7 @@ from instancer.core.instancer.containers import (
     instance_exists,
 )
 from instancer.core.instancer.networks import cleanup_networks, create_networks, create_routing_network
+from instancer.core.instancer.ports import allocate_ports, release_ports
 from instancer.core.instancer.traefik import build_exposed_hostnames, extract_exposes
 from instancer.core.instancer.volumes import cleanup_volumes, create_volumes
 from instancer.protocol import types as protocol
@@ -98,24 +99,34 @@ async def start_instance(form: protocol.RCTFCreateInstanceForm) -> protocol.RCTF
             exposes.setdefault(expose.container_name, []).append(expose)
             expose_indices.setdefault(expose.container_name, []).append(index)
 
-        env_context = {
-            'RCTF_FLAG': form.flags[0].flag if form.flags else '',
-            'RCTF_FLAGS': orjson.dumps([flag.model_dump() for flag in form.flags]).decode(),
-            'RCTF_EXPOSED_HOSTNAMES': orjson.dumps(build_exposed_hostnames(form.expose, instance_id)).decode(),
-        }
-
         created_containers: list[DockerContainer] = []
         networks_created: dict[str, str] = {}
         routing_networks_created: list[str] = []
         volumes_created: dict[str, str] = {}
         indexed_endpoints: list[tuple[int, protocol.RCTFInstanceDetails.Endpoint]] = []
+        allocated_ports: list[int] = []
 
         try:
+            # Pull first so that port reservations don't expire while a large image downloads
+            for container in form.config.services.values():
+                await _ensure_image(docker, container.image)
+
+            host_ports: dict[int, int] | None = None
+            if config.EXPOSE_MODE == 'port':
+                allocated_ports = await allocate_ports(docker, len(form.expose))
+                host_ports = dict(enumerate(allocated_ports))
+
+            env_context = {
+                'RCTF_FLAG': form.flags[0].flag if form.flags else '',
+                'RCTF_FLAGS': orjson.dumps([flag.model_dump() for flag in form.flags]).decode(),
+                'RCTF_EXPOSED_HOSTNAMES': orjson.dumps(
+                    build_exposed_hostnames(form.expose, instance_id, host_ports)
+                ).decode(),
+            }
+
             networks_created = await create_networks(docker, form.config.networks, common_labels)
             volumes_created = await create_volumes(docker, form.config.volumes, common_labels)
             for i, (svc_name, container) in enumerate(form.config.services.items()):
-                await _ensure_image(docker, container.image)
-
                 routing_network: str | None = None
                 if exposes.get(svc_name):
                     routing_network = await create_routing_network(docker, instance_id, i, common_labels)
@@ -133,6 +144,7 @@ async def start_instance(form: protocol.RCTFCreateInstanceForm) -> protocol.RCTF
                     routing_network=routing_network,
                     global_indices=expose_indices.get(svc_name, []),
                     env_context=env_context,
+                    host_ports=host_ports,
                 )
                 created_containers.append(created)
                 indexed_endpoints.extend(zip(expose_indices.get(svc_name, []), endpoints, strict=True))
@@ -150,6 +162,9 @@ async def start_instance(form: protocol.RCTFCreateInstanceForm) -> protocol.RCTF
                 f'Failed to start instance: {form.challenge_integration_id=} {form.team_id=}'
             )
             raise HTTPException(status_code=500, detail='Failed to start instance') from err
+        finally:
+            # Created containers now hold their ports through labels, and failed ones no longer need them
+            await release_ports(allocated_ports)
 
         all_endpoints = [endpoint for _, endpoint in sorted(indexed_endpoints, key=lambda item: item[0])]
         return protocol.RCTFInstanceDetails(

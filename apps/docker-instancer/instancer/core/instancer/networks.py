@@ -56,7 +56,13 @@ async def cleanup_networks(docker: Docker, names: list[str]) -> None:
 
 
 async def _create_network(
-    docker: Docker, name: str, driver: str, labels: dict[str, str], *, internal: bool
+    docker: Docker,
+    name: str,
+    driver: str,
+    labels: dict[str, str],
+    *,
+    internal: bool,
+    options: dict[str, str] | None = None,
 ) -> DockerNetwork:
     try:
         return await docker.networks.create(
@@ -65,6 +71,7 @@ async def _create_network(
                 'Driver': driver,
                 'Internal': internal,
                 'Labels': labels,
+                'Options': options or {},
             }
         )
     except DockerError as err:
@@ -107,6 +114,13 @@ async def create_routing_network(
     labels: dict[str, str],
 ) -> str:
     network_name = f'{config.PREFIX}-{instance_id}-routing-{i}'
+
+    if config.EXPOSE_MODE == 'port':
+        # Docker does not publish ports of containers on internal networks, so keep the network external and turn
+        # off outbound NAT instead: published ports still accept connections, but containers can't reach out
+        options = {} if config.PORT_MODE_ALLOW_EGRESS else {'com.docker.network.bridge.enable_ip_masquerade': 'false'}
+        await _create_network(docker, network_name, 'bridge', labels, internal=False, options=options)
+        return network_name
 
     network = await _create_network(docker, network_name, 'bridge', labels, internal=True)
     await network.connect(

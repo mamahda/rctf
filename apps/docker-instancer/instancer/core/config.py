@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -33,6 +35,15 @@ class Settings(BaseSettings):
     PREFIX: str = 'ti'
 
     INSTANCES_HOST: str
+
+    # `hostname` routes every instance through Traefik by hostname. `port` publishes each exposed container port
+    # on its own host port from the range below, and endpoints are reported as `INSTANCES_HOST:<port>`.
+    EXPOSE_MODE: Literal['hostname', 'port'] = 'hostname'
+    PORT_RANGE_START: int = 30000
+    PORT_RANGE_END: int = 31000
+    # Port mode needs non-internal networks to publish ports; outbound NAT stays off unless this is set
+    PORT_MODE_ALLOW_EGRESS: bool = False
+    PORT_RESERVATION_SECONDS: int = 300
 
     REDIS_HOST: str = 'localhost'
     REDIS_PORT_NUMBER: int = 6379
