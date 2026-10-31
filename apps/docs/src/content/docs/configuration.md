@@ -449,7 +449,7 @@ submissionFields:
 
 The website submits flags through `POST /api/v2/challs/:id/submit`, which accepts these fields as multipart form-data. While any field is `<green>required</green>`, `POST /api/v1/challs/:id/submit` rejects submissions, and flags revealed by instancer actions aren't submitted automatically.
 
-The links are recorded on every flag submission, while the solver file is only stored for correct ones. Both show up in the submission details of the admin panel. Solver files go through the [upload provider](/providers/uploads) under a random `submissions/<uuid>/` path. Uploads are served without authentication, so the unguessable path and the admin panel being the only place that lists it are what keep other teams from reading them.
+AI chat links and any submitted solver file are recorded for correct, incorrect, and already-solved flag submissions. Solver files are stored privately in the database and can be previewed or downloaded from the submission details by an authorized admin. Deleting a solver file from that view also deletes its private database content. Files stored by older versions in the upload provider retain their existing access behavior until removed or migrated.
 
 ### Analytics
 

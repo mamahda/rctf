@@ -52,4 +52,4 @@ Rate limit conventions are documented under [`/api#rate-limits`](/api/#rate-limi
 
 ::request-body{def="SubmitFlagRouteV2" title="Request body"}
 
-A correct flag returns `<response>200 goodFlag</response>` (no data) and records a solve for the team. A submission is correct when any of the challenge's configured flag entries validates it. The route records a submission audit row for both correct and incorrect attempts; correct rows include which flag entry matched, along with the submitted AI chat links and the stored solver file. Admins can read those rows through [`/api/v2/admin/submissions`](/api/admin/).
+A correct flag returns `<response>200 goodFlag</response>` (no data) and records a solve for the team. A submission is correct when any of the challenge's configured flag entries validates it. The route records a submission audit row for both correct and incorrect attempts; correct rows include which flag entry matched. Each recorded attempt includes the submitted AI chat links and solver file, if supplied; solver files are stored privately and are accessible to authorized admins. Admins can read those rows through [`/api/v2/admin/submissions`](/api/admin/).
