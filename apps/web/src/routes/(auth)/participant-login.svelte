@@ -81,6 +81,5 @@
       >Belum punya akun? <a href="/register">Daftar sebagai peserta</a
       >.</footer-note
     >
-    <footer-note><a href="/login?admin=1">Login panitia</a></footer-note>
   </auth-page>
 </Card>

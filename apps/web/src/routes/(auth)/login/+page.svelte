@@ -104,7 +104,7 @@
 
 {#if clientConfig?.isArchived}
   <ArchivedNotice message="Authentication is not available." />
-{:else if clientConfig?.individualAuthEnabled && page.url.searchParams.get('admin') !== '1'}
+{:else if clientConfig?.individualAuthEnabled && page.url.pathname !== '/login/admin' && page.url.searchParams.get('admin') !== '1'}
   <ParticipantLogin />
 {:else if clientConfig}
   <Card title="Login" description="Log in to {clientConfig.ctfName}">
