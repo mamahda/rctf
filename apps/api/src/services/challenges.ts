@@ -1,3 +1,4 @@
+import { deleteSubmissionProof } from './submission-proofs'
 import type {
   AdminBotConfig,
   Challenge,
@@ -50,7 +51,6 @@ import {
 } from './challenge-queries'
 import { rateLimitFlag } from './rate-limit'
 import {
-  deleteSolverFile,
   NO_SUBMISSION_EXTRAS,
   storeSolverFile,
   submissionExtrasDetails,
@@ -1528,6 +1528,9 @@ export const submitFlag = async (
     params.flag,
     { db, teamId: params.userId, challengeId: params.challengeId }
   )
+  const solverFile = extras.solverFile
+    ? await storeSolverFile(db, extras.solverFile)
+    : undefined
   if (matched === null) {
     await createSubmission(db, {
       kind: SubmissionKind.FLAG,
@@ -1537,14 +1540,16 @@ export const submitFlag = async (
       result: SubmissionResult.INCORRECT,
       details: {
         submittedFlag: params.flag,
-        ...submissionExtrasDetails(extras),
+        ...submissionExtrasDetails(extras, solverFile?.stored),
       },
-    }).catch(err =>
+    }).catch(async err => {
+      if (solverFile?.stored.sha256)
+        await deleteSubmissionProof(db, solverFile.stored.sha256)
       log.error(
         { err, challengeId: params.challengeId, userId: params.userId },
         'failed to record incorrect flag submission'
       )
-    )
+    })
     return res.badFlag()
   }
 
@@ -1570,11 +1575,6 @@ export const submitFlag = async (
     'successfull flag submission'
   )
 
-  // only solves keep the solver file, so it is stored once the flag matched
-  const solverFile = extras.solverFile
-    ? await storeSolverFile(extras.solverFile)
-    : undefined
-
   let bloodNumber: number | null
   try {
     bloodNumber = await createSolveAndGetBloodNumber(db, {
@@ -1588,9 +1588,6 @@ export const submitFlag = async (
       extraDetails: submissionExtrasDetails(extras, solverFile?.stored),
     })
   } catch (error) {
-    if (solverFile) {
-      await deleteSolverFile(solverFile.key)
-    }
     const constraintName = getErrorConstraint(error)
     if (constraintName === 'uq') {
       await createSubmission(db, {
@@ -1601,16 +1598,20 @@ export const submitFlag = async (
         result: SubmissionResult.ALREADY_SOLVED,
         details: {
           submittedFlag: params.flag,
-          ...submissionExtrasDetails(extras),
+          ...submissionExtrasDetails(extras, solverFile?.stored),
         },
-      }).catch(err =>
+      }).catch(async err => {
+        if (solverFile?.stored.sha256)
+          await deleteSubmissionProof(db, solverFile.stored.sha256)
         log.error(
           { err, challengeId: params.challengeId, userId: params.userId },
           'failed to record already-solved flag submission'
         )
-      )
+      })
       return res.badAlreadySolvedChallenge()
     }
+    if (solverFile?.stored.sha256)
+      await deleteSubmissionProof(db, solverFile.stored.sha256)
     if (constraintName === 'uuid_fkey') {
       return res.badUnknownUser()
     }
@@ -1618,9 +1619,8 @@ export const submitFlag = async (
   }
 
   if (bloodNumber === null) {
-    if (solverFile) {
-      await deleteSolverFile(solverFile.key)
-    }
+    if (solverFile?.stored.sha256)
+      await deleteSubmissionProof(db, solverFile.stored.sha256)
     return res.badChallenge()
   }
 

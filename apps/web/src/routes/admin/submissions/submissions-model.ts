@@ -104,7 +104,8 @@ function submissionExtrasEntries(
   if (
     isRecord(solverFile) &&
     typeof solverFile.name === 'string' &&
-    typeof solverFile.url === 'string'
+    (typeof solverFile.url === 'string' ||
+      typeof solverFile.sha256 === 'string')
   ) {
     entries.push({
       label: 'solver',
@@ -112,7 +113,7 @@ function submissionExtrasEntries(
         typeof solverFile.size === 'number'
           ? `${solverFile.name} (${formatFileSize(solverFile.size)})`
           : solverFile.name,
-      ...(isSafeLink(solverFile.url)
+      ...(typeof solverFile.url === 'string' && isSafeLink(solverFile.url)
         ? { href: solverFile.url, external: true }
         : {}),
       wide: true,

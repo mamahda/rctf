@@ -2,7 +2,9 @@
   import { SubmissionKind } from '@rctf/types'
   import { IconX } from '$lib/icons'
   import Button from '$lib/ui/button.svelte'
+  import { isRecord } from '$lib/utils/is-record'
   import { detailEntries, type Submission } from '../submissions-model'
+  import ProofPreview from '../proof-preview.svelte'
   import SubmissionEditDialog from './submission-edit-dialog.svelte'
 
   type Props = {
@@ -16,6 +18,11 @@
   const editable = $derived(submission.kind === SubmissionKind.FLAG)
 
   let editing = $state(false)
+  let previewing = $state(false)
+  const privateProof = $derived(
+    isRecord(submission.details.solverFile) &&
+      typeof submission.details.solverFile.sha256 === 'string'
+  )
 </script>
 
 <detail-row>
@@ -43,6 +50,11 @@
       {/each}
     {/if}
   </detail-pills>
+  {#if privateProof}
+    <Button size="sm" variant="ghost" onclick={() => (previewing = true)}
+      >View solver</Button
+    >
+  {/if}
   {#if editable}
     <Button size="sm" variant="ghost" onclick={() => (editing = true)}
       >Edit</Button
@@ -52,6 +64,12 @@
     <IconX aria-hidden="true" />
   </button>
 </detail-row>
+
+<ProofPreview
+  submissionId={submission.id}
+  open={previewing}
+  onOpenChange={open => (previewing = open)}
+/>
 
 {#if editable}
   <SubmissionEditDialog

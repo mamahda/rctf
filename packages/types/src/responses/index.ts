@@ -139,3 +139,5 @@ export * from './bad-signature'
 export * from './bad-replayed-request'
 export * from './good-external-auth'
 export * from './bad-external-auth-request'
+
+export * from './submission-proof'

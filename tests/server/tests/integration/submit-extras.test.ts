@@ -1,6 +1,11 @@
 import { config } from '@rctf/config'
-import { createDatabase, submissions } from '@rctf/db'
-import { BadBody, BadFlag, GoodFlag } from '@rctf/types'
+import { createDatabase, submissions, submissionProofs } from '@rctf/db'
+import {
+  BadAlreadySolvedChallenge,
+  BadBody,
+  BadFlag,
+  GoodFlag,
+} from '@rctf/types'
 import {
   afterAll,
   afterEach,
@@ -12,7 +17,6 @@ import {
 import { desc, eq } from 'drizzle-orm'
 import type { Hono } from 'hono'
 import { createToken, TokenKind } from '../../../../apps/api/src/lib/tokens'
-import { uploadProvider } from '../../../../apps/api/src/providers/instances/uploads'
 import { getApp, request } from '../../app'
 import {
   expectResponse,
@@ -155,18 +159,59 @@ describe('submit extras', () => {
     await expectResponse(res, GoodFlag)
 
     const details = (await latestDetails(user.id)) as {
-      solverFile: { name: string; url: string; size: number }
+      solverFile: { name: string; sha256: string; size: number }
     }
     expect(details.solverFile).toMatchObject({ name: 'solve.py', size: 15 })
-    expect(details.solverFile.url).toMatch(
-      /^\/uploads\/submissions\/[0-9a-f-]{36}\/solve\.py$/
-    )
+    const [proof] = await getDb()
+      .select()
+      .from(submissionProofs)
+      .where(eq(submissionProofs.sha256, details.solverFile.sha256))
+    expect(proof.data.toString()).toBe('print("pwned")\n')
+    expect(details.solverFile).not.toHaveProperty('url')
+  })
 
-    const key = decodeURIComponent(
-      details.solverFile.url.replace('/uploads/', '')
+  test('stores a solver file for incorrect submissions', async () => {
+    config.submissionFields.solverFile = 'optional'
+    const user = await newUser()
+    await expectResponse(
+      await submitV2(user.id, {
+        flag: 'wrong',
+        solverFile: new File(['proof'], 'proof.txt'),
+      }),
+      BadFlag
     )
-    expect((await uploadProvider.getFileInfo(key)).size).toBe(15)
-    await uploadProvider.deleteFile(key)
+    const details = (await latestDetails(user.id)) as {
+      solverFile: { sha256: string }
+    }
+    const [proof] = await getDb()
+      .select()
+      .from(submissionProofs)
+      .where(eq(submissionProofs.sha256, details.solverFile.sha256))
+    expect(proof.data.toString()).toBe('proof')
+  })
+
+  test('stores solver files for already-solved submissions', async () => {
+    config.submissionFields.solverFile = 'optional'
+    const user = await newUser()
+    await expectResponse(
+      await submitV2(user.id, { flag: challengeData.challenge.flag }),
+      GoodFlag
+    )
+    await expectResponse(
+      await submitV2(user.id, {
+        flag: challengeData.challenge.flag,
+        solverFile: new File(['retry'], 'retry.py'),
+      }),
+      BadAlreadySolvedChallenge
+    )
+    const details = (await latestDetails(user.id)) as {
+      solverFile: { sha256: string }
+    }
+    const [proof] = await getDb()
+      .select()
+      .from(submissionProofs)
+      .where(eq(submissionProofs.sha256, details.solverFile.sha256))
+    expect(proof.data.toString()).toBe('retry')
   })
 
   test('rejects solver files over the size limit', async () => {

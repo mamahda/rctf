@@ -21,6 +21,8 @@ import {
   BadToken,
   BadUnknownSolveV2,
   BadUnknownSubmission,
+  BadNoProof,
+  GoodSubmissionProof,
   BadUnknownUser,
   BadUnknownVerification,
   BadUserPrivileged,
@@ -870,4 +872,14 @@ export const DeleteExternalAuthClientRouteV2 = defineRoute({
   authRequired: true,
   params: z.object({ id: z.string().check(z.describe('OAuth client ID.')) }),
   permissions: Permissions.usersWrite,
+})
+
+export const GetAdminSubmissionProofRouteV2 = defineRoute({
+  path: '/v2/admin/submissions/:id/proof',
+  method: 'GET',
+  params: z.object({ id: z.string() }),
+  goodResponses: [GoodSubmissionProof],
+  badResponses: [BadUnknownSubmission, BadNoProof, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite | Permissions.challsRead,
 })

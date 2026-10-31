@@ -1,5 +1,5 @@
 import { config } from '@rctf/config'
-import { createDatabase, submissions } from '@rctf/db'
+import { createDatabase, submissions, submissionProofs } from '@rctf/db'
 import {
   BadBody,
   BadPerms,
@@ -85,6 +85,37 @@ const storedDetails = async (id: string) => {
 }
 
 describe('admin submission update', () => {
+  test('private proof requires admin permission', async () => {
+    const { token } = await adminToken()
+    const ordinary = await adminToken(0)
+    const sha256 = 'a'.repeat(64)
+    await getDb()
+      .insert(submissionProofs)
+      .values({
+        sha256,
+        data: Buffer.from('private proof'),
+        size: 13,
+        contentType: 'text/plain',
+      })
+      .onConflictDoNothing()
+    const id = await createFlagSubmission({
+      solverFile: { sha256, name: 'proof.txt', size: 13 },
+    })
+    const url = `/api/v2/admin/submissions/${id}/proof`
+    const denied = await request(app, url, {
+      headers: { Authorization: `Bearer ${ordinary.token}` },
+    })
+    await expectResponse(denied, BadPerms)
+    const response = await request(app, url, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { data: { data: string } }
+    expect(Buffer.from(body.data.data, 'base64').toString()).toBe(
+      'private proof'
+    )
+  })
+
   test('edits the extra fields and records who edited them', async () => {
     const { adminId, token } = await adminToken()
     const id = await createFlagSubmission({
@@ -131,6 +162,49 @@ describe('admin submission update', () => {
 
     expect(await storedDetails(id)).not.toHaveProperty('solverFile')
     expect((await uploadProvider.getFileInfo(key)).url).toBeNull()
+  })
+
+  test('deletes a private proof without deleting another proof with the same content', async () => {
+    const { token } = await adminToken()
+    const first = 'b'.repeat(64)
+    const second = 'c'.repeat(64)
+    await getDb()
+      .insert(submissionProofs)
+      .values([
+        {
+          sha256: first,
+          data: Buffer.from('pwn'),
+          size: 3,
+          contentType: 'text/plain',
+        },
+        {
+          sha256: second,
+          data: Buffer.from('pwn'),
+          size: 3,
+          contentType: 'text/plain',
+        },
+      ])
+      .onConflictDoNothing()
+    const id = await createFlagSubmission({
+      solverFile: { sha256: first, name: 'solve.py', size: 3 },
+    })
+    await expectResponse(
+      await patchSubmission(token, id, { removeSolverFile: true }),
+      GoodAdminSubmissionUpdated
+    )
+    expect(await storedDetails(id)).not.toHaveProperty('solverFile')
+    expect(
+      await getDb()
+        .select()
+        .from(submissionProofs)
+        .where(eq(submissionProofs.sha256, first))
+    ).toHaveLength(0)
+    expect(
+      await getDb()
+        .select()
+        .from(submissionProofs)
+        .where(eq(submissionProofs.sha256, second))
+    ).toHaveLength(1)
   })
 
   test('rejects links together with the no-AI declaration', async () => {

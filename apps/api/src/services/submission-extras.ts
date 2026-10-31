@@ -1,6 +1,7 @@
 import { config } from '@rctf/config'
 import {
   submissions,
+  submissionProofs,
   type DatabaseClient,
   type SubmissionDetails,
 } from '@rctf/db'
@@ -8,6 +9,7 @@ import { takeUnique } from '@rctf/db/util'
 import { isHttpUrl, SubmissionKind, type FileField } from '@rctf/types'
 import { eq } from 'drizzle-orm'
 import { uploadProvider } from '../providers/instances/uploads'
+import { storeSubmissionProof } from './submission-proofs'
 
 const MAX_AI_CHAT_LINKS = 10
 const MAX_AI_CHAT_LINK_LENGTH = 2048
@@ -20,7 +22,8 @@ export interface SubmissionExtras {
 
 export interface StoredSolverFile {
   name: string
-  url: string
+  url?: string
+  sha256?: string
   size: number
 }
 
@@ -104,23 +107,12 @@ export const normalizeSubmissionExtras = (
   return { ok: true, extras: normalized }
 }
 
-// The random directory keeps solver files unguessable, since upload URLs are
-// served without authentication and only admins are given these
-const solverFileKey = (name: string): string =>
-  `submissions/${crypto.randomUUID()}/${name}`
-
 export const storeSolverFile = async (
+  db: DatabaseClient,
   file: FileField
-): Promise<{ stored: StoredSolverFile; key: string }> => {
-  const key = solverFileKey(file.name)
-  const data = Buffer.from(await file.arrayBuffer())
-  const url = await uploadProvider.uploadFile(data, key)
-  return { stored: { name: file.name, url, size: data.byteLength }, key }
-}
-
-export const deleteSolverFile = async (key: string): Promise<void> => {
-  await uploadProvider.deleteFile(key).catch(() => {})
-}
+): Promise<{ stored: StoredSolverFile }> => ({
+  stored: await storeSubmissionProof(db, file),
+})
 
 export const submissionExtrasDetails = (
   extras: SubmissionExtras,
@@ -196,6 +188,11 @@ export const updateSubmissionExtras = async (
     const solverFile = details.solverFile as Partial<StoredSolverFile> | null
     if (patch.removeSolverFile && solverFile) {
       removedSolverFileUrl = solverFile.url
+      if (solverFile.sha256) {
+        await tx
+          .delete(submissionProofs)
+          .where(eq(submissionProofs.sha256, solverFile.sha256))
+      }
       delete details.solverFile
     }
 
