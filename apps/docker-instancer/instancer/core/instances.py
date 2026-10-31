@@ -72,7 +72,43 @@ async def _show_containers(containers: list[DockerContainer]) -> list[dict]:
     return details
 
 
+def _team_scope(owner_id: str) -> str:
+    parts = owner_id.split(':', 2)
+    return parts[1] if len(parts) == 3 and parts[0] == 'participant' else owner_id
+
+
 async def start_instance(form: protocol.RCTFCreateInstanceForm) -> protocol.RCTFInstanceDetails:
+    # Serialize the quota check and creation for all members of the same team.
+    team_id = _team_scope(form.team_id)
+    async with instance_lock('team-quota', team_id) as acquired:
+        if not acquired:
+            raise NOT_ACQUIRED_ERROR
+        docker = get_docker()
+        containers = await docker.containers.list(
+            all=True,
+            filters={'label': [f'{ContainerLabels.MANAGED_BY}={config.DOCKER_MANAGER_NAME}']},
+        )
+        details = await _show_containers(containers)
+        owned = set()
+        team_instances = set()
+        for detail in details:
+            labels = detail.get('Config', {}).get('Labels') or {}
+            owner = labels.get(ContainerLabels.TEAM_ID)
+            instance = labels.get(ContainerLabels.INSTANCE_ID)
+            if not owner or not instance:
+                continue
+            if owner == form.team_id:
+                owned.add(instance)
+            if _team_scope(owner) == team_id:
+                team_instances.add(instance)
+        if owned:
+            raise HTTPException(status_code=400, detail='Maksimal satu instance aktif per akun. Hentikan instance sebelumnya.')
+        if len(team_instances) >= 3:
+            raise HTTPException(status_code=400, detail='Maksimal tiga instance aktif per tim.')
+        return await _start_instance_locked(form)
+
+
+async def _start_instance_locked(form: protocol.RCTFCreateInstanceForm) -> protocol.RCTFInstanceDetails:
     async with instance_lock(form.challenge_integration_id, form.team_id) as acquired:
         if not acquired:
             raise NOT_ACQUIRED_ERROR

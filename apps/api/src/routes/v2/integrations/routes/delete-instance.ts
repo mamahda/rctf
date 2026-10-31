@@ -3,5 +3,5 @@ import { deleteInstance } from '../../../../services/instance-lifecycle'
 import integrationsGroup from '../group'
 
 integrationsGroup.route(DeleteInstanceRouteV2, ({ ctx, res, params, user }) =>
-  deleteInstance({ res, db: ctx.var.db, user, challengeId: params.id })
+  deleteInstance({ res, db: ctx.var.db, user, participant: ctx.var.participant, challengeId: params.id })
 )

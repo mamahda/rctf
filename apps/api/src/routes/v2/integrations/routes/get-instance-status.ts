@@ -5,5 +5,5 @@ import integrationsGroup from '../group'
 integrationsGroup.route(
   GetInstanceStatusRouteV2,
   ({ ctx, res, params, user }) =>
-    getInstanceStatus({ res, db: ctx.var.db, user, challengeId: params.id })
+    getInstanceStatus({ res, db: ctx.var.db, user, participant: ctx.var.participant, challengeId: params.id })
 )

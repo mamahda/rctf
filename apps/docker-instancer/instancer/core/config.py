@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str = 'localhost'
     REDIS_PORT_NUMBER: int = 6379
     REDIS_PASSWORD: SecretStr
-    REDIS_LOCK_TIMEOUT_SECONDS: int = 60
+    REDIS_LOCK_TIMEOUT_SECONDS: int = 1800
     REDIS_LOCK_BLOCKING_TIMEOUT_SECONDS: int = 30
 
     DOCKER_STOP_TIMEOUT_SECONDS: int = 5

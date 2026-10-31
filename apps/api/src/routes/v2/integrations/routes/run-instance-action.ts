@@ -10,6 +10,7 @@ integrationsGroup.route(
       db: ctx.var.db,
       redis: ctx.var.redis,
       user,
+      participant: ctx.var.participant,
       challengeId: params.id,
       actionId: params.action,
     })

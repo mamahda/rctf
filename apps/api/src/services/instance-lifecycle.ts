@@ -29,6 +29,7 @@ export interface InstanceRequest {
   user: User
   challengeId: string
   includeHidden?: boolean
+  participant?: { nrp: string }
 }
 
 type InstanceResponse = ReturnType<
@@ -53,6 +54,7 @@ export interface InstanceActionRequest {
   challengeId: string
   actionId: string
   includeHidden?: boolean
+  participant?: { nrp: string }
 }
 
 type InstanceActionResponse = ReturnType<
@@ -64,11 +66,15 @@ const instancerError = (message: string): instanceDetailsOrError => ({
   message,
 })
 
+const instanceOwnerId = (user: User, participant?: { nrp: string }): string =>
+  participant ? `participant:${user.id}:${participant.nrp}` : user.id
+
 const instanceQueryOptions = (
   user: User,
-  challenge: Challenge
+  challenge: Challenge,
+  participant?: { nrp: string }
 ): InstanceQueryOptions => ({
-  teamId: user.id,
+  teamId: instanceOwnerId(user, participant),
   challengeIntegrationId: inferChallengeIntegrationId(challenge),
   config: challenge.data.instancerConfig!.config,
 })
@@ -101,16 +107,20 @@ export const getInstanceStatus = (
   request: InstanceRequest
 ): Promise<InstanceResponse> =>
   withInstancerChallenge(request, (challenge, provider) =>
-    provider.getInstance(instanceQueryOptions(request.user, challenge))
+    provider.getInstance(instanceQueryOptions(request.user, challenge, request.participant))
   )
 
 export const createInstance = (
   request: InstanceRequest
 ): Promise<InstanceResponse> =>
   withInstancerChallenge(request, async (challenge, provider) =>
-    provider.createInstance(
-      await buildCreateInstanceOptions(request.db, challenge, request.user)
-    )
+    (async () => {
+      const options = await buildCreateInstanceOptions(request.db, challenge, request.user)
+      return provider.createInstance({
+        ...options,
+        user: { ...options.user, id: instanceOwnerId(request.user, request.participant) },
+      })
+    })()
   )
 
 export const deleteInstance = (
@@ -122,7 +132,7 @@ export const deleteInstance = (
     }
 
     return await provider.deleteInstance(
-      instanceQueryOptions(request.user, challenge)
+      instanceQueryOptions(request.user, challenge, request.participant)
     )
   })
 
@@ -140,7 +150,7 @@ export const extendInstance = (
     }
 
     return await provider.extendInstance({
-      ...instanceQueryOptions(request.user, challenge),
+      ...instanceQueryOptions(request.user, challenge, request.participant),
       timeoutMilliseconds: instancerConfig.timeoutMilliseconds,
     })
   })
@@ -153,6 +163,7 @@ export const runInstanceAction = async ({
   challengeId,
   actionId,
   includeHidden,
+  participant,
 }: InstanceActionRequest): Promise<InstanceActionResponse> => {
   const { challenge, provider, error } = await getInstancerChallenge(
     res,
@@ -185,7 +196,7 @@ export const runInstanceAction = async ({
 
   const outcome = await provider.runAction(
     action.id,
-    instanceQueryOptions(user, challenge)
+    instanceQueryOptions(user, challenge, participant)
   )
   if (outcome.kind === 'instancerError') {
     return res.badInstancerError(outcome)
