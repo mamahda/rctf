@@ -161,21 +161,23 @@
         {#if user && !isArchived}
           {@const currentUser = user}
           <footer-actions>
-            <Tooltip label="Copy login URL">
-              {#snippet children({ props })}
-                <button
-                  {...mergeProps(props, {
-                    onclick: () => {
-                      if (currentUser.teamToken)
-                        copyLoginUrl(currentUser.teamToken)
-                    },
-                  })}
-                  aria-label="Copy login URL"
-                >
-                  <IconCopy />
-                </button>
-              {/snippet}
-            </Tooltip>
+            {#if currentUser.teamToken}
+              <Tooltip label="Copy login URL">
+                {#snippet children({ props })}
+                  <button
+                    {...mergeProps(props, {
+                      onclick: () => {
+                        if (currentUser.teamToken)
+                          copyLoginUrl(currentUser.teamToken)
+                      },
+                    })}
+                    aria-label="Copy login URL"
+                  >
+                    <IconCopy />
+                  </button>
+                {/snippet}
+              </Tooltip>
+            {/if}
             <Tooltip label="Log out">
               {#snippet children({ props })}
                 <button

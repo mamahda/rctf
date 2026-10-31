@@ -13,6 +13,7 @@ export enum TokenKind {
   Team = 1,
   Verify = 2,
   CtftimeAuth = 4,
+  Participant = 5,
 }
 
 export type AuthTokenData = string
@@ -43,6 +44,7 @@ export interface TokenDataTypes {
   [TokenKind.Team]: TeamTokenData
   [TokenKind.Verify]: VerifyTokenData
   [TokenKind.CtftimeAuth]: CtftimeAuthTokenData
+  [TokenKind.Participant]: string
 }
 
 export type Token = string
@@ -56,6 +58,7 @@ interface InternalTokenData<Kind extends TokenKind> {
 export const tokenExpiries: Record<TokenKind, number> = {
   [TokenKind.Auth]: Infinity,
   [TokenKind.Team]: Infinity,
+  [TokenKind.Participant]: 12 * 60 * 60,
   [TokenKind.Verify]: Math.floor(config.loginTimeout / 1000),
   [TokenKind.CtftimeAuth]: Math.floor(config.loginTimeout / 1000),
 }

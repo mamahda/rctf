@@ -34,6 +34,7 @@ integrationsGroup.route(GetClientConfigRouteV2, async ({ res, ctx }) => {
     emailEnabled: Boolean(config.email),
     analytics: getAnalyticsConfig(),
     registrationsEnabled: config.registrationsEnabled ?? null,
+    individualAuthEnabled: config.individualAuthEnabled,
     ctftime: config.ctftime ?? null,
     instancerEnabled,
     isArchived: false,

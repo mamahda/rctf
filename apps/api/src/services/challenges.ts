@@ -1483,11 +1483,15 @@ export const submitFlag = async (
     challengeId: string
     flag: string
     submissionIp: string | undefined
+    participant?: { nrp: string; name: string }
     // already checked against the config by normalizeSubmissionExtras
     extras?: SubmissionExtras
   }
 ): Promise<ReturnType<SubmitResponseHelpers[keyof SubmitResponseHelpers]>> => {
   const extras = params.extras ?? NO_SUBMISSION_EXTRAS
+  const participantDetails = params.participant
+    ? { participant: params.participant }
+    : {}
 
   // NOTE(es3n1n): Directly querying from the database to bypass any stale cache entries
   const submitter = await getSubmitterState(db, params.userId)
@@ -1541,6 +1545,7 @@ export const submitFlag = async (
       details: {
         submittedFlag: params.flag,
         ...submissionExtrasDetails(extras, solverFile?.stored),
+        ...participantDetails,
       },
     }).catch(async err => {
       if (solverFile?.stored.sha256)
@@ -1585,7 +1590,10 @@ export const submitFlag = async (
       matchedFlag: matched,
       cheated,
       cheatedFrom,
-      extraDetails: submissionExtrasDetails(extras, solverFile?.stored),
+      extraDetails: {
+        ...submissionExtrasDetails(extras, solverFile?.stored),
+        ...participantDetails,
+      },
     })
   } catch (error) {
     const constraintName = getErrorConstraint(error)
@@ -1599,6 +1607,7 @@ export const submitFlag = async (
         details: {
           submittedFlag: params.flag,
           ...submissionExtrasDetails(extras, solverFile?.stored),
+          ...participantDetails,
         },
       }).catch(async err => {
         if (solverFile?.stored.sha256)

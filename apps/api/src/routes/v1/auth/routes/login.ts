@@ -1,3 +1,4 @@
+import { config } from '@rctf/config'
 import type { User } from '@rctf/db'
 import { LoginRoute } from '@rctf/types'
 import { createToken, parseToken, TokenKind } from '../../../../lib/tokens'
@@ -29,6 +30,9 @@ authGroup.route(LoginRoute, async ({ ctx, res, body }) => {
   if (!user) {
     return res.badUnknownUser()
   }
+
+  if (config.individualAuthEnabled && !user.perms)
+    return res.badTokenVerification()
 
   const authToken = await createToken(TokenKind.Auth, user.id)
   return res.goodLogin({ authToken })

@@ -86,6 +86,17 @@ function submissionExtrasEntries(
   details: Record<string, unknown>
 ): DetailEntry[] {
   const entries: DetailEntry[] = []
+  if (
+    isRecord(details.participant) &&
+    typeof details.participant.nrp === 'string' &&
+    typeof details.participant.name === 'string'
+  ) {
+    entries.push({
+      label: 'participant',
+      value: `${details.participant.name} (${details.participant.nrp})`,
+      wide: true,
+    })
+  }
   if (Array.isArray(details.aiChatLinks)) {
     for (const [index, url] of details.aiChatLinks.entries()) {
       if (typeof url !== 'string') continue

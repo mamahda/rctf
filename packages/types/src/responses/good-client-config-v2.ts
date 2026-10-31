@@ -101,6 +101,9 @@ export const GoodClientConfigV2 = response('goodClientConfigV2', {
     emailEnabled: example(z.boolean(), true).check(
       z.describe('Whether email-based auth is enabled.')
     ),
+    individualAuthEnabled: z
+      .optional(z.boolean())
+      .check(z.describe('Whether participants use individual accounts.')),
     registrationsEnabled: example(z.nullable(z.boolean()), true).check(
       z.describe('Whether registrations are open, or `null` when unset.')
     ),

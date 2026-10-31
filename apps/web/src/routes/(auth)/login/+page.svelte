@@ -18,6 +18,7 @@
   import { getRedirectPath } from '$lib/utils/redirect'
   import { onMount } from 'svelte'
   import ButtonCtftime from '../button-ctftime.svelte'
+  import ParticipantLogin from '../participant-login.svelte'
 
   const queryClient = useQueryClient()
   const configQuery = useClientConfig()
@@ -103,6 +104,8 @@
 
 {#if clientConfig?.isArchived}
   <ArchivedNotice message="Authentication is not available." />
+{:else if clientConfig?.individualAuthEnabled && page.url.searchParams.get('admin') !== '1'}
+  <ParticipantLogin />
 {:else if clientConfig}
   <Card title="Login" description="Log in to {clientConfig.ctfName}">
     <auth-page>

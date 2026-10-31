@@ -35,9 +35,10 @@ import {
   type CompetitionTiming,
 } from '../services/settings'
 import { getUser } from '../services/users'
+import { getParticipant } from '../services/participant-accounts'
 import { validateCaptcha } from '../util/captcha'
 import type { ApiContext, AppEnv } from './app-env'
-import { parseToken, TokenKind } from './tokens'
+import { parseTokenWithMultipleKinds, TokenKind } from './tokens'
 
 const AUTH_PREFIX = 'Bearer '
 type JsonResponse = [Record<string, unknown>, ContentfulStatusCode]
@@ -145,16 +146,29 @@ const getAuthenticatedUser = async (
     return undefined
   }
 
-  const userId = await parseToken(
-    TokenKind.Auth,
+  const parsed = await parseTokenWithMultipleKinds(
+    [TokenKind.Auth, TokenKind.Participant],
     authHeader.slice(AUTH_PREFIX.length)
   )
-  if (!userId) {
-    return undefined
+  if (!parsed) return undefined
+  const [kind, id] = parsed
+  let userId = id
+  if (kind === TokenKind.Participant) {
+    if (!config.individualAuthEnabled) return undefined
+    const participant = await getParticipant(context.var.db, id)
+    if (!participant?.passwordHash || !participant.joined) return undefined
+    context.set('participant', { nrp: participant.nrp, name: participant.name })
+    userId = participant.assignedTeamId
   }
 
   const cached = await getCachedUser(context.var.redis, userId)
   if (cached) {
+    if (
+      config.individualAuthEnabled &&
+      kind === TokenKind.Auth &&
+      !cached.perms
+    )
+      return undefined
     return cached
   }
 
@@ -166,6 +180,8 @@ const getAuthenticatedUser = async (
     })
   }
 
+  if (config.individualAuthEnabled && kind === TokenKind.Auth && !user?.perms)
+    return undefined
   return user
 }
 

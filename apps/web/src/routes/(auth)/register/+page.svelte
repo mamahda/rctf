@@ -26,6 +26,7 @@
   import { onMount } from 'svelte'
   import ButtonCtftime from '../button-ctftime.svelte'
   import TeamTokenCard from '../team-token-card.svelte'
+  import ParticipantRegister from '../participant-register.svelte'
 
   const queryClient = useQueryClient()
   const configQuery = useClientConfig()
@@ -118,6 +119,8 @@
 
 {#if clientConfig?.isArchived}
   <ArchivedNotice message="Registration is not available." />
+{:else if clientConfig?.individualAuthEnabled}
+  <ParticipantRegister />
 {:else if clientConfig?.registrationsEnabled === false}
   <Card
     title="Registrations closed"

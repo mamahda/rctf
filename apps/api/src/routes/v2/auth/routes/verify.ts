@@ -1,3 +1,4 @@
+import { config } from '@rctf/config'
 import { VerifyRouteV2 } from '@rctf/types'
 import { checkLoginVerification } from '../../../../cache/auth-cache'
 import {
@@ -20,6 +21,7 @@ authGroup.route(VerifyRouteV2, async ({ ctx, body, res }) => {
     body.verifyToken
   )
   if (!result) {
+    if (config.individualAuthEnabled) return res.badTokenVerification()
     const pending = await claimPendingRegistrationVerificationByToken(
       ctx.var.db,
       body.verifyToken
@@ -59,6 +61,8 @@ authGroup.route(VerifyRouteV2, async ({ ctx, body, res }) => {
     if (!user) {
       return res.badUnknownUser()
     }
+    if (config.individualAuthEnabled && !user.perms)
+      return res.badTokenVerification()
     const authToken = await createToken(TokenKind.Auth, user.id)
     return res.goodVerify({ authToken })
   }

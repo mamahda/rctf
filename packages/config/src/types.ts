@@ -94,6 +94,7 @@ export const ServerConfigSchema = z.object({
 
   // Auth
   registrationsEnabled: z._default(z.boolean(), true),
+  individualAuthEnabled: z._default(z.boolean(), false),
   userMembers: z._default(z.boolean(), true),
   maxMembers: z._default(z.number(), 50),
   loginTimeout: z._default(z.number(), 3_600_000),

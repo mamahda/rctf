@@ -1,3 +1,4 @@
+import { registerParticipantRoutes } from './routes/participant-auth'
 import { config } from '@rctf/config'
 import { BadEndpoint, ErrorInternal } from '@rctf/types'
 import { withTimeout } from '@rctf/util'
@@ -32,6 +33,7 @@ const createApp = () => {
 
   app.use(pinoLogger({ pino: logger }))
   app.use(appEnvMiddleware)
+  registerParticipantRoutes(app)
   registerHealthRoutes(app)
   registerErrorHandlers(app)
 

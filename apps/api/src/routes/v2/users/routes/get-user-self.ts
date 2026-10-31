@@ -16,7 +16,7 @@ usersGroup.route(GetUserSelfRouteV2, async ({ ctx, user, res }) => {
 
   return res.goodUserSelfDataV2({
     ...fullUser,
-    teamToken: teamToken,
+    teamToken: ctx.var.participant ? '' : teamToken,
     allowedDivisions: allowedDivs,
     perms: user.perms,
     banned: fullUser.banned ?? false,

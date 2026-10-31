@@ -95,14 +95,16 @@
   )
 
   const userMenuItems = $derived([
-    {
-      value: 'copy-login-url',
-      label: 'Copy login URL',
-      icon: IconCopy,
-      onSelect: () => {
-        if (user?.teamToken) copyLoginUrl(user.teamToken)
-      },
-    },
+    ...(user?.teamToken
+      ? [
+          {
+            value: 'copy-login-url',
+            label: 'Copy login URL',
+            icon: IconCopy,
+            onSelect: () => copyLoginUrl(user.teamToken),
+          },
+        ]
+      : []),
     {
       value: 'profile',
       label: 'Manage team',

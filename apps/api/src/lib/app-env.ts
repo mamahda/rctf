@@ -12,6 +12,7 @@ export type AppEnv = {
     logger: PinoLogger
     redis: TypedRedis
     ip: string
+    participant?: { nrp: string; name: string }
     dynamicChallenge?: DynamicChallengeContext
   }
 }
