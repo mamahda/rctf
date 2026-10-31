@@ -13,7 +13,7 @@ import { getUser } from '../services/users'
 const message = (kind: string, message: string) => ({ kind, message })
 const invalid = message(
   'badParticipantCredentials',
-  'NRP, invitation code, or password is incorrect.'
+  'NRP or password is invalid, or the NRP is already registered.'
 )
 const unauthorized = message(
   'badParticipantToken',
@@ -71,13 +71,11 @@ export const registerParticipantRoutes = (app: Hono<AppEnv>) => {
     if (!config.individualAuthEnabled)
       return ctx.json(message('badEndpoint', 'Not available.'), 404)
     const body = await readBody(ctx)
-    const { nrp, invitationCode, password } = body
+    const { nrp, password } = body
     if (
       typeof nrp !== 'string' ||
-      typeof invitationCode !== 'string' ||
       typeof password !== 'string' ||
       !/^\d{10}$/.test(nrp) ||
-      invitationCode.length > 128 ||
       password.length > 128
     )
       return ctx.json(invalid, 400)
@@ -89,7 +87,6 @@ export const registerParticipantRoutes = (app: Hono<AppEnv>) => {
     if (
       !(await registerParticipant(ctx.var.db, {
         nrp,
-        inviteCode: invitationCode,
         password,
       }))
     )

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Provision individually invited participants from a private team manifest.
+"""Provision the allowed participant roster from a private team manifest.
 
 Run on the rCTF host after applying the participant_accounts migration.
-The existing team manifest must contain team, members (nrp/name), and token.
+The existing team manifest must contain team, members (nrp/name), and token (the token is not distributed by this script).
 """
 import argparse
 import csv
@@ -52,7 +52,7 @@ for team in manifest:
         if not re.fullmatch(r'\d{10}', nrp) or nrp in seen or not person:
             raise SystemExit('Invalid or duplicate roster entry')
         seen.add(nrp)
-        prepared.append({'nrp': nrp, 'name': person, 'team': name, 'team_id': team_ids[name], 'invitation_code': secrets.token_urlsafe(24), 'team_code': team['token']})
+        prepared.append({'nrp': nrp, 'name': person, 'team': name, 'team_id': team_ids[name], 'reserved_hash': hashlib.sha256(secrets.token_bytes(32)).hexdigest()})
 if not prepared:
     raise SystemExit('Roster is empty')
 existing = set(psql('SELECT nrp FROM participant_accounts;').splitlines())
@@ -64,21 +64,20 @@ for player in prepared:
     content = '\n'.join([
         'QUADRATHLON CTF — AKUN PESERTA',
         'Nama: ' + player['name'], 'NRP: ' + player['nrp'], 'Tim: ' + player['team'], '',
-        '1. Buka http://10.28.78.199/register dan masukkan NRP serta kode pendaftaran pribadi:',
-        player['invitation_code'],
-        '2. Buat password khusus kompetisi (minimal 12 karakter), lalu login.',
-        '3. Masukkan kode tim berikut untuk bergabung:', player['team_code'], '',
-        'Kode pendaftaran hanya dapat digunakan sekali. Jangan bagikan kode atau password.',
+        '1. Buka http://10.28.78.199/register dan daftar dengan NRP serta password pilihan sendiri.',
+        '2. Login menggunakan NRP dan password tersebut.',
+        '3. Minta kode tim kepada panitia, lalu masukkan kode itu untuk bergabung.', '',
+        'Gunakan password khusus kompetisi dan jangan bagikan password.',
         'Jika kehilangan akses, hubungi panitia.', '',
     ])
     write_secret(args.out / (player['nrp'] + '.txt'), content)
 write_secret(args.out / 'panitia-semua-peserta.json', json.dumps(prepared, ensure_ascii=False, indent=2) + '\n')
 values = []
 for player in prepared:
-    digest = hashlib.sha256(player['invitation_code'].encode()).hexdigest()
+    digest = player['reserved_hash']
     values.append('(' + ','.join(map(quote, [player['nrp'], player['name'], player['team_id'], digest])) + ')')
 try:
     psql('BEGIN; INSERT INTO participant_accounts (nrp,name,assigned_team_id,invite_hash) VALUES ' + ','.join(values) + '; COMMIT;')
 except subprocess.CalledProcessError as exc:
     raise SystemExit('Provisioning failed; no rows committed. Protected files remain at ' + str(args.out)) from exc
-print(f'Provisioned {len(prepared)} invited participants across {len(manifest)} teams; protected files: {args.out}')
+print(f'Provisioned {len(prepared)} participants across {len(manifest)} teams; protected files: {args.out}')

@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Hono } from 'hono'
 import { createToken, TokenKind } from '../../../../apps/api/src/lib/tokens'
-import { hashInvitation } from '../../../../apps/api/src/services/participant-accounts'
 import { getApp, request } from '../../app'
 import { generateChallenge, generateRealTestUser } from '../../util'
 let app: Hono<any>
@@ -13,7 +12,6 @@ let team: Awaited<ReturnType<typeof generateRealTestUser>>
 let other: Awaited<ReturnType<typeof generateRealTestUser>>
 let challenge: Awaited<ReturnType<typeof generateChallenge>>
 const nrp = '5025261249'
-const invitationCode = 'test-invitation-unique-1234567890'
 const password = 'a sufficiently long password'
 let participantToken: string
 let teamToken: string
@@ -36,14 +34,12 @@ beforeAll(async () => {
   challenge = await generateChallenge()
   teamToken = await createToken(TokenKind.Team, team.user.id)
   legacyAuthToken = await createToken(TokenKind.Auth, team.user.id)
-  await db()
-    .insert(participantAccounts)
-    .values({
-      nrp,
-      name: 'Test Participant',
-      assignedTeamId: team.user.id,
-      inviteHash: hashInvitation(invitationCode),
-    })
+  await db().insert(participantAccounts).values({
+    nrp,
+    name: 'Test Participant',
+    assignedTeamId: team.user.id,
+    inviteHash: 'unused',
+  })
 })
 afterAll(async () => {
   config.individualAuthEnabled = original
@@ -53,12 +49,11 @@ afterAll(async () => {
   await challenge.cleanup()
 })
 describe('individual participant accounts', () => {
-  test('registration requires an invitation and it can only be claimed once', async () => {
+  test('registration requires an allowed NRP and it can only be claimed once', async () => {
     expect(
       (
         await api('/v2/participants/register', {
-          nrp,
-          invitationCode: 'wrong',
+          nrp: '0000000001',
           password,
         })
       ).status
@@ -67,7 +62,6 @@ describe('individual participant accounts', () => {
       (
         await api('/v2/participants/register', {
           nrp,
-          invitationCode,
           password: 'short',
         })
       ).status
@@ -76,7 +70,6 @@ describe('individual participant accounts', () => {
       (
         await api('/v2/participants/register', {
           nrp,
-          invitationCode,
           password,
         })
       ).status
@@ -85,7 +78,6 @@ describe('individual participant accounts', () => {
       (
         await api('/v2/participants/register', {
           nrp,
-          invitationCode,
           password,
         })
       ).status
@@ -93,20 +85,17 @@ describe('individual participant accounts', () => {
   })
   test('rejects uninvited NRPs and makes simultaneous claims atomic', async () => {
     const otherNrp = '1234567890'
-    await db()
-      .insert(participantAccounts)
-      .values({
-        nrp: otherNrp,
-        name: 'Second Participant',
-        assignedTeamId: team.user.id,
-        inviteHash: hashInvitation(invitationCode),
-      })
+    await db().insert(participantAccounts).values({
+      nrp: otherNrp,
+      name: 'Second Participant',
+      assignedTeamId: team.user.id,
+      inviteHash: 'unused',
+    })
     try {
       expect(
         (
           await api('/v2/participants/register', {
             nrp: '0000000000',
-            invitationCode,
             password,
           })
         ).status
@@ -114,12 +103,10 @@ describe('individual participant accounts', () => {
       const attempts = await Promise.all([
         api('/v2/participants/register', {
           nrp: otherNrp,
-          invitationCode,
           password,
         }),
         api('/v2/participants/register', {
           nrp: otherNrp,
-          invitationCode,
           password,
         }),
       ])

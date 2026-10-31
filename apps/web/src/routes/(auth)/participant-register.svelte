@@ -6,7 +6,6 @@
   import Input from '$lib/ui/input.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
   let nrp = $state('')
-  let invitationCode = $state('')
   let password = $state('')
   let confirmation = $state('')
   let error = $state('')
@@ -26,7 +25,6 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nrp: nrp.trim(),
-          invitationCode: invitationCode.trim(),
           password,
         }),
       })
@@ -47,7 +45,7 @@
 <Card
   titleAsHeading
   title="Daftar peserta"
-  description="Gunakan NRP dan kode pendaftaran pribadi dari panitia."
+  description="Daftar dengan NRP yang telah didaftarkan ke panitia dan buat password sendiri."
 >
   <auth-page>
     <form onsubmit={submit}>
@@ -58,15 +56,6 @@
             bind:value={nrp}
             inputmode="numeric"
             autocomplete="username"
-            required
-          />{/snippet}</Field
-      >
-      <Field label="Kode pendaftaran pribadi" required
-        >{#snippet children({ id, describedBy })}<Input
-            {id}
-            aria-describedby={describedBy}
-            bind:value={invitationCode}
-            autocomplete="off"
             required
           />{/snippet}</Field
       >

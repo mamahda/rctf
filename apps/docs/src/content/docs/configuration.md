@@ -245,9 +245,9 @@ Division ACLs require an email provider. Disable CTFtime authentication when usi
 
 ### Authentication
 
-When `individualAuthEnabled: true`, participants authenticate individually using an organizer-provisioned NRP and a one-time invitation code. The organizer preassigns each account to one team; the participant must log in and supply that team's code before accessing team routes. Team token login and old non-admin team sessions are disabled in this mode. Admins retain their existing login. Passwords are hashed with Argon2id; participant sessions expire after 12 hours. Participant name and NRP are included in flag submission details. This mode limits accounts to the invited roster, but cannot prevent someone sharing their individual password.
+When `individualAuthEnabled: true`, participants authenticate individually using an organizer-provisioned NRP and a password they choose. The organizer preassigns each account to one team; the participant must log in and supply that team's code before accessing team routes. Team token login and old non-admin team sessions are disabled in this mode. Admins retain their existing login. Passwords are hashed with Argon2id; participant sessions expire after 12 hours. Participant name and NRP are included in flag submission details. This mode limits accounts to the roster, but NRP alone does not verify identity: another person who knows an unclaimed NRP can register it first. Password sharing remains possible.
 
-For the Quadrathlon deployment, `deploy/participant/provision.py` creates the participant records from the organizer's protected team manifest and writes one private invitation file per participant. Keep the generated files private and use HTTPS or another encrypted connection for credentials.
+For the Quadrathlon deployment, `deploy/participant/provision.py` creates the participant records from the organizer's protected team manifest. Keep the generated files private and use HTTPS or another encrypted connection for credentials.
 
 
 ```yaml
