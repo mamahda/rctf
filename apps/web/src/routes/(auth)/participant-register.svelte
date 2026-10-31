@@ -45,6 +45,7 @@
 </script>
 
 <Card
+  titleAsHeading
   title="Daftar peserta"
   description="Gunakan NRP dan kode pendaftaran pribadi dari panitia."
 >

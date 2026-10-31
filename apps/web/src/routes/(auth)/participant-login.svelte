@@ -43,6 +43,7 @@
 </script>
 
 <Card
+  titleAsHeading
   title="Login peserta"
   description="Masuk dengan akun peserta Quadrathlon CTF."
 >

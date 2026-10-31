@@ -46,6 +46,7 @@
 </script>
 
 <Card
+  titleAsHeading
   title="Bergabung ke tim"
   description="Masukkan kode tim dari panitia untuk bergabung ke tim yang sudah ditetapkan."
 >
