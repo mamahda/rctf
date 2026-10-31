@@ -29,7 +29,7 @@
   import Button from '$lib/ui/button.svelte'
   import Progress from '$lib/ui/progress.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
-  import { createAsyncAction } from '$lib/utils/async-action.svelte'
+  import { getSharedInstanceAction } from './shared-instance-action.svelte'
   import { copyText } from '$lib/utils/clipboard'
   import { formatEndpoint } from '$lib/utils/instancer'
   import { formatCountdown } from '$lib/utils/time'
@@ -98,7 +98,7 @@
     return 'running'
   })
 
-  const instanceAction = createAsyncAction<string>()
+  const instanceAction = $derived(getSharedInstanceAction(challengeId, admin))
   const actionsDisabled = $derived(
     instanceAction.pending || status === InstanceStatus.STOPPING
   )
