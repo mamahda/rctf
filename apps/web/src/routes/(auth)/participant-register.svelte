@@ -59,13 +59,13 @@
             required
           />{/snippet}</Field
       >
-      <Field label="Password" description="Gunakan 12–128 karakter." required
+      <Field label="Password" description="Gunakan 8–128 karakter." required
         >{#snippet children({ id, describedBy })}<Input
             {id}
             aria-describedby={describedBy}
             type="password"
             bind:value={password}
-            minlength={12}
+            minlength={8}
             maxlength={128}
             autocomplete="new-password"
             required
@@ -77,7 +77,7 @@
             aria-describedby={describedBy}
             type="password"
             bind:value={confirmation}
-            minlength={12}
+            minlength={8}
             maxlength={128}
             autocomplete="new-password"
             required

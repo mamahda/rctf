@@ -19,7 +19,7 @@ export const registerParticipant = async (
 ): Promise<boolean> => {
   if (
     !/^\d{10}$/.test(params.nrp) ||
-    params.password.length < 12 ||
+    params.password.length < 8 ||
     params.password.length > 128
   )
     return false
