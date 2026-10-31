@@ -64,7 +64,7 @@ export const SubmitFlagRouteV2 = defineRoute({
       .check(z.maxLength(1024))
       .check(z.describe('Maximum length `1024`.')),
     aiChatLinks: z.optional(
-      example(z.string(), 'https://chatgpt.com/share/...')
+      example(z.string(), 'https://chat.deepseek.com/share/...')
         .check(z.maxLength(24_576))
         .check(z.describe('AI chat share links, one HTTP(S) URL per line.'))
     ),

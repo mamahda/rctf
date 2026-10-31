@@ -190,7 +190,7 @@
                 <link-row>
                   <Input
                     type="url"
-                    placeholder="https://chatgpt.com/share/..."
+                    placeholder="https://chat.deepseek.com/share/..."
                     autocomplete="off"
                     aria-label={`AI chat link ${i + 1}`}
                     disabled={form.submitting || didNotUseAi}

@@ -103,7 +103,7 @@
             aria-describedby={describedBy}
             aria-invalid={!!linksError || undefined}
             rows={3}
-            placeholder="https://chatgpt.com/share/..."
+            placeholder="https://chat.deepseek.com/share/..."
             disabled={saving}
             bind:value={form.aiChatLinks}
           />
